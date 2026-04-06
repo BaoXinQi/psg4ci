@@ -1,0 +1,26 @@
+name: Docker Build Test
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Show files
+        run: |
+          pwd
+          ls -lah
+          find . -maxdepth 2 -type f | sort | head -200
+
+      - name: Build Docker image
+        run: |
+          docker build -t psg4ci-test .
+          docker run --rm psg4ci-test python -c "import torch, torchvision, mne, pyedflib, edfio, sklearn, h5py, pandas, numpy; print('IMPORT_OK')"

@@ -1,0 +1,754 @@
+lookup_key,display_name,canonical_name,family,modality,priority,source,is_active,notes
+a2-f3,a2:f3,F3-M2,f3_m2,BAS,10,official_channel_table,1,eeg
+eeg f3-a2,eeg f3-a2,F3-M2,f3_m2,BAS,10,official_channel_table,1,eeg
+eeg f3-a22,EEG F3-A22,F3-M2,f3_m2,BAS,10,sleepfm_group_backfill,1,from channel_groups.json
+f3 a2,f3/a2,F3-M2,f3_m2,BAS,10,official_channel_table,1,eeg
+f3 m2,f3/m2,F3-M2,f3_m2,BAS,10,official_channel_table,1,eeg
+f3-a2,f3-a2,F3-M2,f3_m2,BAS,10,official_channel_table,1,eeg
+f3-avg,f3-avg,F3-M2,f3_m2,BAS,10,official_channel_table,1,eeg
+f3-m1 plus m2,F3:M1+M2,F3-M2,f3_m2,BAS,10,sleepfm_group_backfill,1,from channel_groups.json
+f3-m1-m2,F3:M1:M2,F3-M2,f3_m2,BAS,10,sleepfm_group_backfill,1,from channel_groups.json
+f3-m2,f3-m2,F3-M2,f3_m2,BAS,10,official_channel_table,1,eeg
+f3-m2 plus m1,f3-m2+m1,F3-M2,f3_m2,BAS,10,official_channel_table,1,eeg
+f3-m2-m1,F3:M2:M1,F3-M2,f3_m2,BAS,10,sleepfm_group_backfill,1,from channel_groups.json
+f3a2,F3A2,F3-M2,f3_m2,BAS,10,sleepfm_group_backfill,1,from channel_groups.json
+f3m2,f3m2,F3-M2,f3_m2,BAS,10,official_channel_table,1,eeg
+f4-m1-f3-m2,F4-M1:F3-M2,F3-M2,f3_m2,BAS,10,sleepfm_group_backfill,1,from channel_groups.json
+m2-f3,m2:f3,F3-M2,f3_m2,BAS,10,official_channel_table,1,eeg
+a1-f4,a1:f4,F4-M1,f4_m1,BAS,20,official_channel_table,1,eeg
+eeg f4-a1,eeg f4-a1,F4-M1,f4_m1,BAS,20,official_channel_table,1,eeg
+eeg f4-a12,EEG F4-A12,F4-M1,f4_m1,BAS,20,sleepfm_group_backfill,1,from channel_groups.json
+f4 a1,f4/a1,F4-M1,f4_m1,BAS,20,official_channel_table,1,eeg
+f4 m1,f4/m1,F4-M1,f4_m1,BAS,20,official_channel_table,1,eeg
+f4-a1,f4-a1,F4-M1,f4_m1,BAS,20,official_channel_table,1,eeg
+f4-avg,f4-avg,F4-M1,f4_m1,BAS,20,official_channel_table,1,eeg
+f4-m1,f4-m1,F4-M1,f4_m1,BAS,20,official_channel_table,1,eeg
+f4-m1 plus m2,f4-m1+m2,F4-M1,f4_m1,BAS,20,official_channel_table,1,eeg
+f4-m1-m2,F4:M1:M2,F4-M1,f4_m1,BAS,20,sleepfm_group_backfill,1,from channel_groups.json
+f4-m2-m1,F4:M2:M1,F4-M1,f4_m1,BAS,20,sleepfm_group_backfill,1,from channel_groups.json
+f4a1,F4A1,F4-M1,f4_m1,BAS,20,sleepfm_group_backfill,1,from channel_groups.json
+f4m1,f4m1,F4-M1,f4_m1,BAS,20,official_channel_table,1,eeg
+m1-f4,m1:f4,F4-M1,f4_m1,BAS,20,official_channel_table,1,eeg
+a2-a1-c3,A2:A1:C3,C3-M2,c3_m2,BAS,30,sleepfm_group_backfill,1,from channel_groups.json
+a2-c3,a2:c3,C3-M2,c3_m2,BAS,30,official_channel_table,1,eeg
+c3 a2,c3/a2,C3-M2,c3_m2,BAS,30,official_channel_table,1,eeg
+c3 m2,c3/m2,C3-M2,c3_m2,BAS,30,official_channel_table,1,eeg
+c3-a2,c3-a2,C3-M2,c3_m2,BAS,30,official_channel_table,1,eeg
+c3-avg,c3-avg,C3-M2,c3_m2,BAS,30,official_channel_table,1,eeg
+c3-m1 plus m2,C3:M1+M2,C3-M2,c3_m2,BAS,30,sleepfm_group_backfill,1,from channel_groups.json
+c3-m1-m2,C3:M1:M2,C3-M2,c3_m2,BAS,30,sleepfm_group_backfill,1,from channel_groups.json
+c3-m2,c3-m2,C3-M2,c3_m2,BAS,30,official_channel_table,1,eeg
+c3-m2 plus m1,c3-m2+m1,C3-M2,c3_m2,BAS,30,official_channel_table,1,eeg
+c3-m2-c4-m1,C3-M2:C4-M1,C3-M2,c3_m2,BAS,30,sleepfm_group_backfill,1,from channel_groups.json
+c3-m2-m1,C3:M2:M1,C3-M2,c3_m2,BAS,30,sleepfm_group_backfill,1,from channel_groups.json
+c3a2,C3A2,C3-M2,c3_m2,BAS,30,sleepfm_group_backfill,1,from channel_groups.json
+c3m2,c3m2,C3-M2,c3_m2,BAS,30,official_channel_table,1,eeg
+eeg c3-a2,eeg c3-a2,C3-M2,c3_m2,BAS,30,official_channel_table,1,eeg
+eeg c3-a22,EEG C3-A22,C3-M2,c3_m2,BAS,30,sleepfm_group_backfill,1,from channel_groups.json
+m2-c3,m2:c3,C3-M2,c3_m2,BAS,30,official_channel_table,1,eeg
+a1-c4,a1:c4,C4-M1,c4_m1,BAS,40,official_channel_table,1,eeg
+c4 a1,c4/a1,C4-M1,c4_m1,BAS,40,official_channel_table,1,eeg
+c4 m1,c4/m1,C4-M1,c4_m1,BAS,40,official_channel_table,1,eeg
+c4-a1,c4-a1,C4-M1,c4_m1,BAS,40,official_channel_table,1,eeg
+c4-avg,c4-avg,C4-M1,c4_m1,BAS,40,official_channel_table,1,eeg
+c4-m1,c4-m1,C4-M1,c4_m1,BAS,40,official_channel_table,1,eeg
+c4-m1 plus m2,c4-m1+m2,C4-M1,c4_m1,BAS,40,official_channel_table,1,eeg
+c4-m1-m2,C4:M1:M2,C4-M1,c4_m1,BAS,40,sleepfm_group_backfill,1,from channel_groups.json
+c4-m2-m1,C4:M2:M1,C4-M1,c4_m1,BAS,40,sleepfm_group_backfill,1,from channel_groups.json
+c4a1,C4A1,C4-M1,c4_m1,BAS,40,sleepfm_group_backfill,1,from channel_groups.json
+c4m1,c4m1,C4-M1,c4_m1,BAS,40,official_channel_table,1,eeg
+eeg c4-a1,eeg c4-a1,C4-M1,c4_m1,BAS,40,official_channel_table,1,eeg
+eeg c4-a12,EEG C4-A12,C4-M1,c4_m1,BAS,40,sleepfm_group_backfill,1,from channel_groups.json
+m1-c4,m1:c4,C4-M1,c4_m1,BAS,40,official_channel_table,1,eeg
+a2-o1,a2:o1,O1-M2,o1_m2,BAS,50,official_channel_table,1,eeg
+eeg o1-a2,eeg o1-a2,O1-M2,o1_m2,BAS,50,official_channel_table,1,eeg
+eeg o1-a22,EEG O1-A22,O1-M2,o1_m2,BAS,50,sleepfm_group_backfill,1,from channel_groups.json
+m2-m1-o1-m2,M2:M1:O1:M2,O1-M2,o1_m2,BAS,50,sleepfm_group_backfill,1,from channel_groups.json
+m2-o1,m2:o1,O1-M2,o1_m2,BAS,50,official_channel_table,1,eeg
+o1 a2,o1/a2,O1-M2,o1_m2,BAS,50,official_channel_table,1,eeg
+o1 m2,o1/m2,O1-M2,o1_m2,BAS,50,official_channel_table,1,eeg
+o1-a2,o1-a2,O1-M2,o1_m2,BAS,50,official_channel_table,1,eeg
+o1-avg,o1-avg,O1-M2,o1_m2,BAS,50,official_channel_table,1,eeg
+o1-m1 plus m2,O1:M1+M2,O1-M2,o1_m2,BAS,50,sleepfm_group_backfill,1,from channel_groups.json
+o1-m1-m2,O1:M1:M2,O1-M2,o1_m2,BAS,50,sleepfm_group_backfill,1,from channel_groups.json
+o1-m2,o1-m2,O1-M2,o1_m2,BAS,50,official_channel_table,1,eeg
+o1-m2 plus m1,o1-m2+m1,O1-M2,o1_m2,BAS,50,official_channel_table,1,eeg
+o1-m2-m1,O1:M2:M1,O1-M2,o1_m2,BAS,50,sleepfm_group_backfill,1,from channel_groups.json
+o1a2,O1A2,O1-M2,o1_m2,BAS,50,sleepfm_group_backfill,1,from channel_groups.json
+o1m2,o1m2,O1-M2,o1_m2,BAS,50,official_channel_table,1,eeg
+o2-m1-o1-m2,O2-M1:O1-M2,O1-M2,o1_m2,BAS,50,sleepfm_group_backfill,1,from channel_groups.json
+a1-o2,a1:o2,O2-M1,o2_m1,BAS,60,official_channel_table,1,eeg
+eeg o2-a1,eeg o2-a1,O2-M1,o2_m1,BAS,60,official_channel_table,1,eeg
+eeg o2-a12,EEG O2-A12,O2-M1,o2_m1,BAS,60,sleepfm_group_backfill,1,from channel_groups.json
+m1-o2,m1:o2,O2-M1,o2_m1,BAS,60,official_channel_table,1,eeg
+o2 a1,o2/a1,O2-M1,o2_m1,BAS,60,official_channel_table,1,eeg
+o2 m1,o2/m1,O2-M1,o2_m1,BAS,60,official_channel_table,1,eeg
+o2-a1,o2-a1,O2-M1,o2_m1,BAS,60,official_channel_table,1,eeg
+o2-avg,o2-avg,O2-M1,o2_m1,BAS,60,official_channel_table,1,eeg
+o2-m1,o2-m1,O2-M1,o2_m1,BAS,60,official_channel_table,1,eeg
+o2-m1 plus m2,o2-m1+m2,O2-M1,o2_m1,BAS,60,official_channel_table,1,eeg
+o2-m1-m2,O2:M1:M2,O2-M1,o2_m1,BAS,60,sleepfm_group_backfill,1,from channel_groups.json
+o2-m2-m1,O2:M2:M1,O2-M1,o2_m1,BAS,60,sleepfm_group_backfill,1,from channel_groups.json
+o2a1,O2A1,O2-M1,o2_m1,BAS,60,sleepfm_group_backfill,1,from channel_groups.json
+o2m1,o2m1,O2-M1,o2_m1,BAS,60,official_channel_table,1,eeg
+a1,a1,M1,m1,BAS,70,official_channel_table,1,eeg
+m1,m1,M1,m1,BAS,70,official_channel_table,1,eeg
+a1-eog1,A1:EOG1,E1,eog_left,BAS,71,sleepfm_group_backfill,1,from channel_groups.json
+a1-eog2,A1:EOG2,E1,eog_left,BAS,71,sleepfm_group_backfill,1,from channel_groups.json
+a2-eog1,A2:EOG1,E1,eog_left,BAS,71,sleepfm_group_backfill,1,from channel_groups.json
+a2-eog2,A2:EOG2,E1,eog_left,BAS,71,sleepfm_group_backfill,1,from channel_groups.json
+e1-cz,E1-Cz,E1,eog_left,BAS,71,sleepfm_group_backfill,1,from channel_groups.json
+e1-e2,E1:E2,E1,eog_left,BAS,71,sleepfm_group_backfill,1,from channel_groups.json
+e1-fp2,E1:Fp2,E1,eog_left,BAS,71,sleepfm_group_backfill,1,from channel_groups.json
+e1-m1 plus m2,E1:M1+M2,E1,eog_left,BAS,71,sleepfm_group_backfill,1,from channel_groups.json
+e1-m1-m2,E1:M1:M2,E1,eog_left,BAS,71,sleepfm_group_backfill,1,from channel_groups.json
+e1-m2-m1,E1:M2:M1,E1,eog_left,BAS,71,sleepfm_group_backfill,1,from channel_groups.json
+e1m2,E1M2,E1,eog_left,BAS,71,sleepfm_group_backfill,1,from channel_groups.json
+e2 (reog),E2 (REOG),E1,eog_left,BAS,71,sleepfm_group_backfill,1,from channel_groups.json
+eog roc-a12,EOG ROC-A12,E1,eog_left,BAS,71,sleepfm_group_backfill,1,from channel_groups.json
+eog roc-a22,EOG ROC-A22,E1,eog_left,BAS,71,sleepfm_group_backfill,1,from channel_groups.json
+eog1-a1,EOG1:A1,E1,eog_left,BAS,71,sleepfm_group_backfill,1,from channel_groups.json
+eog1-a2,EOG1:A2,E1,eog_left,BAS,71,sleepfm_group_backfill,1,from channel_groups.json
+eog2-a1,EOG2:A1,E1,eog_left,BAS,71,sleepfm_group_backfill,1,from channel_groups.json
+eog2-a2,EOG2:A2,E1,eog_left,BAS,71,sleepfm_group_backfill,1,from channel_groups.json
+eogr,EOGr,E1,eog_left,BAS,71,sleepfm_group_backfill,1,from channel_groups.json
+eogr-m1,EOGr:M1,E1,eog_left,BAS,71,sleepfm_group_backfill,1,from channel_groups.json
+eogr-m2,EOGr:M2,E1,eog_left,BAS,71,sleepfm_group_backfill,1,from channel_groups.json
+eogr512,EOGr512,E1,eog_left,BAS,71,sleepfm_group_backfill,1,from channel_groups.json
+eogr512-m1,EOGr512:M1,E1,eog_left,BAS,71,sleepfm_group_backfill,1,from channel_groups.json
+eogr512-m2,EOGr512:M2,E1,eog_left,BAS,71,sleepfm_group_backfill,1,from channel_groups.json
+f3-m2-e1-m1,F3:M2:E1:M1,E1,eog_left,BAS,71,sleepfm_group_backfill,1,from channel_groups.json
+m1-e1,M1:E1,E1,eog_left,BAS,71,sleepfm_group_backfill,1,from channel_groups.json
+o1-e1-m1,O1:E1:M1,E1,eog_left,BAS,71,sleepfm_group_backfill,1,from channel_groups.json
+reog,REOG,E1,eog_left,BAS,71,sleepfm_group_backfill,1,from channel_groups.json
+a2-e1,a2:e1,LOC,eog_left,BAS,71,official_channel_table,1,eog
+e1 (leog),E1 (LEOG),LOC,eog_left,BAS,71,sleepfm_group_backfill,1,from channel_groups.json
+e1-a2,e1:a2,LOC,eog_left,BAS,71,official_channel_table,1,eog
+e1-m1,e1-m1,LOC,eog_left,BAS,71,official_channel_table,1,eog
+e1-m2,e1-m2,LOC,eog_left,BAS,71,official_channel_table,1,eog
+e2-avg,e2-avg,LOC,eog_left,BAS,71,official_channel_table,1,eog
+eog l,eog l,LOC,eog_left,BAS,71,official_channel_table,1,eog
+eog loc-a1,eog loc-a1,LOC,eog_left,BAS,71,official_channel_table,1,eog
+eog loc-a2,eog loc-a2,LOC,eog_left,BAS,71,official_channel_table,1,eog
+eog loc-a22,EOG LOC-A22,LOC,eog_left,BAS,71,sleepfm_group_backfill,1,from channel_groups.json
+eog loc-m2,eog loc-m2,LOC,eog_left,BAS,71,official_channel_table,1,eog
+eog(l),eog(l),LOC,eog_left,BAS,71,official_channel_table,1,eog
+eog-l,eog-l,LOC,eog_left,BAS,71,official_channel_table,1,eog
+eog1,eog1,LOC,eog_left,BAS,71,official_channel_table,1,eog
+eogl,EOGl,LOC,eog_left,BAS,71,sleepfm_group_backfill,1,from channel_groups.json
+eogl-m1,EOGl:M1,LOC,eog_left,BAS,71,sleepfm_group_backfill,1,from channel_groups.json
+eogl-m2,EOGl:M2,LOC,eog_left,BAS,71,sleepfm_group_backfill,1,from channel_groups.json
+l-eog,l-eog,LOC,eog_left,BAS,71,official_channel_table,1,eog
+leog,LEOG,LOC,eog_left,BAS,71,sleepfm_group_backfill,1,from channel_groups.json
+loc,loc,LOC,eog_left,BAS,71,official_channel_table,1,eog
+loc-a2,loc-a2,LOC,eog_left,BAS,71,official_channel_table,1,eog
+loc-m2,loc-m2,LOC,eog_left,BAS,71,official_channel_table,1,eog
+lt eye (e1),lt eye (e1),LOC,eog_left,BAS,71,official_channel_table,1,eog
+lt. eye (e1),lt. eye (e1),LOC,eog_left,BAS,71,official_channel_table,1,eog
+m2-e1,m2:e1,LOC,eog_left,BAS,71,official_channel_table,1,eog
+e2-cz,E2-Cz,E2,eog_right,BAS,72,sleepfm_group_backfill,1,from channel_groups.json
+e2-fp1,E2:Fp1,E2,eog_right,BAS,72,sleepfm_group_backfill,1,from channel_groups.json
+e2-m1 plus m2,E2:M1+M2,E2,eog_right,BAS,72,sleepfm_group_backfill,1,from channel_groups.json
+e2-m1-m2,E2:M1:M2,E2,eog_right,BAS,72,sleepfm_group_backfill,1,from channel_groups.json
+e2-m2-m1,E2:M2:M1,E2,eog_right,BAS,72,sleepfm_group_backfill,1,from channel_groups.json
+e2m2,E2M2,E2,eog_right,BAS,72,sleepfm_group_backfill,1,from channel_groups.json
+fp1-e2,Fp1:E2,E2,eog_right,BAS,72,sleepfm_group_backfill,1,from channel_groups.json
+m2-e2,M2:E2,E2,eog_right,BAS,72,sleepfm_group_backfill,1,from channel_groups.json
+m2-e2-m1,M2:E2:M1,E2,eog_right,BAS,72,sleepfm_group_backfill,1,from channel_groups.json
+a1-e2,a1:e2,ROC,eog_right,BAS,72,official_channel_table,1,eog
+e1-avg,e1-avg,ROC,eog_right,BAS,72,official_channel_table,1,eog
+e2-a1,e2:a1,ROC,eog_right,BAS,72,official_channel_table,1,eog
+e2-m1,e2-m1,ROC,eog_right,BAS,72,official_channel_table,1,eog
+e2-m2,e2-m2,ROC,eog_right,BAS,72,official_channel_table,1,eog
+eog r,eog r,ROC,eog_right,BAS,72,official_channel_table,1,eog
+eog roc-a1,eog roc-a1,ROC,eog_right,BAS,72,official_channel_table,1,eog
+eog roc-a2,eog roc-a2,ROC,eog_right,BAS,72,official_channel_table,1,eog
+eog roc-m1,eog roc-m1,ROC,eog_right,BAS,72,official_channel_table,1,eog
+eog(r),eog(r),ROC,eog_right,BAS,72,official_channel_table,1,eog
+eog-r,eog-r,ROC,eog_right,BAS,72,official_channel_table,1,eog
+eog2,eog2,ROC,eog_right,BAS,72,official_channel_table,1,eog
+m1-e2,m1:e2,ROC,eog_right,BAS,72,official_channel_table,1,eog
+r-eog,r-eog,ROC,eog_right,BAS,72,official_channel_table,1,eog
+roc,roc,ROC,eog_right,BAS,72,official_channel_table,1,eog
+roc-a1,roc-a1,ROC,eog_right,BAS,72,official_channel_table,1,eog
+roc-m1,roc-m1,ROC,eog_right,BAS,72,official_channel_table,1,eog
+rt eye (e2),rt eye (e2),ROC,eog_right,BAS,72,official_channel_table,1,eog
+rt. eye (e2),rt. Eye (e2),ROC,eog_right,BAS,72,official_channel_table,1,eog
+e1,e1,E1,eog_left,BAS,73,official_channel_table,1,eog
+e2,e2,E2,eog_right,BAS,74,official_channel_table,1,eog
+a2,a2,M2,m2,BAS,80,official_channel_table,1,eeg
+m2,m2,M2,m2,BAS,80,official_channel_table,1,eeg
+eeg f3-a1,EEG F3-A1,F3,f3,BAS,90,sleepfm_group_backfill,1,from channel_groups.json
+f3,f3,F3,f3,BAS,90,official_channel_table,1,eeg
+f3-cz,F3-Cz,F3,f3,BAS,90,sleepfm_group_backfill,1,from channel_groups.json
+f3-f4,F3:F4,F3,f3,BAS,90,sleepfm_group_backfill,1,from channel_groups.json
+f3-m1,F3-M1,F3,f3,BAS,90,sleepfm_group_backfill,1,from channel_groups.json
+f4-f3,F4:F3,F3,f3,BAS,90,sleepfm_group_backfill,1,from channel_groups.json
+m1-f3,M1:F3,F3,f3,BAS,90,sleepfm_group_backfill,1,from channel_groups.json
+eeg f4-a2,EEG F4-A2,F4,f4,BAS,100,sleepfm_group_backfill,1,from channel_groups.json
+f4,f4,F4,f4,BAS,100,official_channel_table,1,eeg
+f4-cz,F4-Cz,F4,f4,BAS,100,sleepfm_group_backfill,1,from channel_groups.json
+f4-m2,F4-M2,F4,f4,BAS,100,sleepfm_group_backfill,1,from channel_groups.json
+m2-f4,M2:F4,F4,f4,BAS,100,sleepfm_group_backfill,1,from channel_groups.json
+c3,c3,C3,c3,BAS,110,official_channel_table,1,eeg
+c3-a1,C3-A1,C3,c3,BAS,110,sleepfm_group_backfill,1,from channel_groups.json
+c3-c4,C3:C4,C3,c3,BAS,110,sleepfm_group_backfill,1,from channel_groups.json
+c3-cz,C3-Cz,C3,c3,BAS,110,sleepfm_group_backfill,1,from channel_groups.json
+c3-m1,C3-M1,C3,c3,BAS,110,sleepfm_group_backfill,1,from channel_groups.json
+c3-o1,C3-O1,C3,c3,BAS,110,sleepfm_group_backfill,1,from channel_groups.json
+c3m1,C3M1,C3,c3,BAS,110,sleepfm_group_backfill,1,from channel_groups.json
+c4-c3,C4:C3,C3,c3,BAS,110,sleepfm_group_backfill,1,from channel_groups.json
+eeg c3-a1,EEG C3-A1,C3,c3,BAS,110,sleepfm_group_backfill,1,from channel_groups.json
+fp1-c3,Fp1-C3,C3,c3,BAS,110,sleepfm_group_backfill,1,from channel_groups.json
+m1-c3,M1:C3,C3,c3,BAS,110,sleepfm_group_backfill,1,from channel_groups.json
+c4,c4,C4,c4,BAS,120,official_channel_table,1,eeg
+c4-a2,C4-A2,C4,c4,BAS,120,sleepfm_group_backfill,1,from channel_groups.json
+c4-cz,C4-Cz,C4,c4,BAS,120,sleepfm_group_backfill,1,from channel_groups.json
+c4-m2,C4-M2,C4,c4,BAS,120,sleepfm_group_backfill,1,from channel_groups.json
+c4m2,C4M2,C4,c4,BAS,120,sleepfm_group_backfill,1,from channel_groups.json
+eeg c4-a2,EEG C4-A2,C4,c4,BAS,120,sleepfm_group_backfill,1,from channel_groups.json
+f2-c4,F2-C4,C4,c4,BAS,120,sleepfm_group_backfill,1,from channel_groups.json
+fp2-c4,Fp2-C4,C4,c4,BAS,120,sleepfm_group_backfill,1,from channel_groups.json
+m2-c4,M2:C4,C4,c4,BAS,120,sleepfm_group_backfill,1,from channel_groups.json
+t4-c4,T4:C4,C4,c4,BAS,120,sleepfm_group_backfill,1,from channel_groups.json
+eeg o1-a1,EEG O1-A1,O1,o1,BAS,130,sleepfm_group_backfill,1,from channel_groups.json
+m1-o1,M1:O1,O1,o1,BAS,130,sleepfm_group_backfill,1,from channel_groups.json
+o1,o1,O1,o1,BAS,130,official_channel_table,1,eeg
+o1-cz,O1-Cz,O1,o1,BAS,130,sleepfm_group_backfill,1,from channel_groups.json
+o1-m1,O1-M1,O1,o1,BAS,130,sleepfm_group_backfill,1,from channel_groups.json
+o1-x,O1-x,O1,o1,BAS,130,sleepfm_group_backfill,1,from channel_groups.json
+o1m1,O1M1,O1,o1,BAS,130,sleepfm_group_backfill,1,from channel_groups.json
+o2-o1,O2:O1,O1,o1,BAS,130,sleepfm_group_backfill,1,from channel_groups.json
+t3-o1,T3-O1,O1,o1,BAS,130,sleepfm_group_backfill,1,from channel_groups.json
+eeg o2-a2,EEG O2-A2,O2,o2,BAS,140,sleepfm_group_backfill,1,from channel_groups.json
+m2-o2,M2:O2,O2,o2,BAS,140,sleepfm_group_backfill,1,from channel_groups.json
+o2,o2,O2,o2,BAS,140,official_channel_table,1,eeg
+o2-m2,O2-M2,O2,o2,BAS,140,sleepfm_group_backfill,1,from channel_groups.json
+o2-x,O2-x,O2,o2,BAS,140,sleepfm_group_backfill,1,from channel_groups.json
+o2m2,O2M2,O2,o2,BAS,140,sleepfm_group_backfill,1,from channel_groups.json
+t4-o2,T4-O2,O2,o2,BAS,140,sleepfm_group_backfill,1,from channel_groups.json
+01-a2,01-A2,01-A2,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+a1a2,A1A2,A1A2,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+a2-a1,A2:A1,A2:A1,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+c2-cz,C2-Cz,C2-CZ,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+cz,Cz,CZ,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+cza2,CZA2,CZA2,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+czm2,CZM2,CZM2,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+eeg,EEG,EEG,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+eeg (sec),EEG (SEC),EEG (SEC),bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+eeg 2,EEG 2,EEG 2,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+eeg a1-a2,EEG A1-A2,EEG A1-A2,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+eeg f7-a2,EEG F7-A2,EEG F7-A2,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+eeg f8-a1,EEG F8-A1,EEG F8-A1,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+eeg fp1-a2,EEG Fp1-A2,EEG FP1-A2,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+eeg fp1-a22,EEG Fp1-A22,EEG FP1-A22,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+eeg fp2-a1,EEG Fp2-A1,EEG FP2-A1,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+eeg fp2-a12,EEG Fp2-A12,EEG FP2-A12,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+eeg p3-a2,EEG P3-A2,EEG P3-A2,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+eeg p4-a1,EEG P4-A1,EEG P4-A1,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+eeg sec,EEG sec,EEG SEC,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+eeg t3-a2,EEG T3-A2,EEG T3-A2,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+eeg t4-a1,EEG T4-A1,EEG T4-A1,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+eeg t5-a2,EEG T5-A2,EEG T5-A2,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+eeg t6-a1,EEG T6-A1,EEG T6-A1,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+eeg(sec),EEG(SEC),EEG(SEC),bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+eeg1,EEG1,EEG1,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+eeg2,EEG2,EEG2,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+eeg3,EEG3,EEG3,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+f1-a2,F1-A2,F1-A2,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+f1m2,F1M2,F1M2,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+f2-t4,F2-T4,F2-T4,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+f2m1,F2M1,F2M1,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+f7,F7,F7,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+f7-cz,F7-Cz,F7-CZ,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+f7-m2,F7:M2,F7:M2,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+f7a2,F7A2,F7A2,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+f7m2,F7M2,F7M2,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+f8,F8,F8,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+f8-cz,F8-Cz,F8-CZ,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+f8-f7,F8:F7,F8:F7,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+f8-m1,F8:M1,F8:M1,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+f8a1,F8A1,F8A1,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+f8m1,F8M1,F8M1,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+fp1,Fp1,FP1,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+fp1-a2,FP1-A2,FP1-A2,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+fp1-cz,Fp1-Cz,FP1-CZ,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+fp1-t3,Fp1-T3,FP1-T3,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+fp1 a2,Fp1/A2,FP1/A2,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+fp1-fp2,Fp1:Fp2,FP1:FP2,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+fp1-m1 plus m2,Fp1:M1+M2,FP1:M1+M2,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+fp1-m2,Fp1:M2,FP1:M2,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+fp1a2,FP1A2,FP1A2,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+fp1m2,FP1M2,FP1M2,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+fp2,Fp2,FP2,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+fp2-cz,Fp2-Cz,FP2-CZ,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+fp2-t4,Fp2-T4,FP2-T4,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+fp2-a1,Fp2:A1,FP2:A1,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+fp2-fp1,Fp2:Fp1,FP2:FP1,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+fp2-m1,Fp2:M1,FP2:M1,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+fp2-m1 plus m2,Fp2:M1+M2,FP2:M1+M2,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+fp2a1,FP2A1,FP2A1,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+fp2m1,FP2M1,FP2M1,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+fpz,Fpz,FPZ,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+fpz-oz,Fpz:Oz,FPZ:OZ,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+fz,Fz,FZ,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+fz-a1,Fz-A1,FZ-A1,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+fz-a1a2,FZ-A1A2,FZ-A1A2,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+fz-a2,Fz-A2,FZ-A2,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+fz-cz,Fz-Cz,FZ-CZ,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+fz-m1m2,FZ-M1M2,FZ-M1M2,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+fza2,FZA2,FZA2,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+fzm2,FZM2,FZM2,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+m1-cz,M1-Cz,M1-CZ,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+m1-fp2,M1:Fp2,M1:FP2,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+m1m2,M1M2,M1M2,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+m2-cz,M2-Cz,M2-CZ,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+m2-fp1,M2:Fp1,M2:FP1,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+m2-m1,M2:M1,M2:M1,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+oz,Oz,OZ,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+oz-m1,Oz:M1,OZ:M1,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+p3,P3,P3,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+p3-cz,P3-Cz,P3-CZ,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+p3-m2,P3:M2,P3:M2,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+p3-p4,P3:P4,P3:P4,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+p3m2,P3M2,P3M2,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+p4,P4,P4,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+p4-cz,P4-Cz,P4-CZ,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+p4-m1,P4:M1,P4:M1,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+p4m1,P4M1,P4M1,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+pz,Pz,PZ,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+pz-cz,Pz-Cz,PZ-CZ,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+pz-fz,Pz:Fz,PZ:FZ,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+pza1,PZA1,PZA1,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+pzm1,PZM1,PZM1,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+t3,T3,T3,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+t3-cz,T3-Cz,T3-CZ,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+t3 a2,T3/A2,T3/A2,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+t3-m1,T3:M1,T3:M1,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+t3-m2,T3:M2,T3:M2,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+t3-t4,T3:T4,T3:T4,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+t3a2,T3A2,T3A2,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+t3m2,T3M2,T3M2,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+t4,T4,T4,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+t4-cz,T4-Cz,T4-CZ,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+t4 a1,T4/A1,T4/A1,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+t4-m1,T4:M1,T4:M1,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+t4a1,T4A1,T4A1,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+t4m1,T4M1,T4M1,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+t5,T5,T5,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+t5-cz,T5-Cz,T5-CZ,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+t5-m2,T5:M2,T5:M2,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+t5a2,T5A2,T5A2,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+t5m2,T5M2,T5M2,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+t6,T6,T6,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+t6-cz,T6-Cz,T6-CZ,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+t6-m1,T6:M1,T6:M1,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+t6-t5,T6:T5,T6:T5,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+t6a1,T6A1,T6A1,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+t6m1,T6M1,T6M1,bas,BAS,995,sleepfm_group_backfill,1,from channel_groups.json
+air flow,air flow,AIRFLOW,airflow,RESP,10,official_channel_table,1,resp
+airflow,airflow,AIRFLOW,airflow,RESP,10,official_channel_table,1,resp
+airflow thermal,airflow thermal,AIRFLOW,airflow,RESP,10,official_channel_table,1,resp
+airflow-0,AIRFLOW-0,AIRFLOW,airflow,RESP,10,sleepfm_group_backfill,1,from channel_groups.json
+airflow-1,AIRFLOW-1,AIRFLOW,airflow,RESP,10,sleepfm_group_backfill,1,from channel_groups.json
+airflow2,airflow2,AIRFLOW,airflow,RESP,10,official_channel_table,1,resp
+flow,flow,AIRFLOW,airflow,RESP,10,official_channel_table,1,resp
+flow dr,flow_dr,AIRFLOW,airflow,RESP,10,official_channel_table,1,resp
+flow ii,flow ii,AIRFLOW,airflow,RESP,10,official_channel_table,1,resp
+flow-dr,FLOW-DR,AIRFLOW,airflow,RESP,10,json_alias_patch,1,from channel_alias_map.json
+gnd-flow,gnd-flow,AIRFLOW,airflow,RESP,10,official_channel_table,1,resp
+oral therm,Oral Therm,AIRFLOW,airflow,RESP,10,sleepfm_group_backfill,1,from channel_groups.json
+oral thermistor,Oral Thermistor,AIRFLOW,airflow,RESP,10,sleepfm_group_backfill,1,from channel_groups.json
+therm,therm,AIRFLOW,airflow,RESP,10,official_channel_table,1,resp
+thermal,thermal,AIRFLOW,airflow,RESP,10,official_channel_table,1,resp
+thermal airflow,thermal airflow,AIRFLOW,airflow,RESP,10,official_channel_table,1,resp
+thermal flow,thermal flow,AIRFLOW,airflow,RESP,10,official_channel_table,1,resp
+thermist,Thermist,AIRFLOW,airflow,RESP,10,sleepfm_group_backfill,1,from channel_groups.json
+thermister,thermister,AIRFLOW,airflow,RESP,10,official_channel_table,1,resp
+thermistor,thermistor,AIRFLOW,airflow,RESP,10,official_channel_table,1,resp
+thermistor 2,thermistor 2,AIRFLOW,airflow,RESP,10,official_channel_table,1,resp
+trach therm,Trach Therm,AIRFLOW,airflow,RESP,10,sleepfm_group_backfill,1,from channel_groups.json
+cannula,cannula,NASAL_PRESSURE,nasal_pressure,RESP,20,official_channel_table,1,resp
+cannula flow,cannula_flow,NASAL_PRESSURE,nasal_pressure,RESP,20,official_channel_table,1,resp
+n pres,N Pres,NASAL_PRESSURE,nasal_pressure,RESP,20,sleepfm_group_backfill,1,from channel_groups.json
+nasal,nasal,NASAL_PRESSURE,nasal_pressure,RESP,20,official_channel_table,1,resp
+nasal backup,Nasal Backup,NASAL_PRESSURE,nasal_pressure,RESP,20,sleepfm_group_backfill,1,from channel_groups.json
+nasal cannula,nasal cannula,NASAL_PRESSURE,nasal_pressure,RESP,20,official_channel_table,1,resp
+nasal canula,nasal canula,NASAL_PRESSURE,nasal_pressure,RESP,20,official_channel_table,1,resp
+nasal flow,nasal flow,NASAL_PRESSURE,nasal_pressure,RESP,20,official_channel_table,1,resp
+nasal oral,nasal oral,NASAL_PRESSURE,nasal_pressure,RESP,20,official_channel_table,1,resp
+nasal oral therm,Nasal/Oral Therm,NASAL_PRESSURE,nasal_pressure,RESP,20,sleepfm_group_backfill,1,from channel_groups.json
+nasal p,NASAL P,NASAL_PRESSURE,nasal_pressure,RESP,20,sleepfm_group_backfill,1,from channel_groups.json
+nasal pressure,nasal_pressure,NASAL_PRESSURE,nasal_pressure,RESP,20,official_channel_table,1,resp
+nasal snore,Nasal Snore,NASAL_PRESSURE,nasal_pressure,RESP,20,sleepfm_group_backfill,1,from channel_groups.json
+nasal therm,Nasal Therm,NASAL_PRESSURE,nasal_pressure,RESP,20,sleepfm_group_backfill,1,from channel_groups.json
+nasal thermistor,Nasal Thermistor,NASAL_PRESSURE,nasal_pressure,RESP,20,sleepfm_group_backfill,1,from channel_groups.json
+nasal-ac,Nasal-AC,NASAL_PRESSURE,nasal_pressure,RESP,20,sleepfm_group_backfill,1,from channel_groups.json
+nasalac,NasalAC,NASAL_PRESSURE,nasal_pressure,RESP,20,sleepfm_group_backfill,1,from channel_groups.json
+nasaldc,NasalDC,NASAL_PRESSURE,nasal_pressure,RESP,20,sleepfm_group_backfill,1,from channel_groups.json
+nasalflow,nasalflow,NASAL_PRESSURE,nasal_pressure,RESP,20,official_channel_table,1,resp
+nasalor,NasalOr,NASAL_PRESSURE,nasal_pressure,RESP,20,sleepfm_group_backfill,1,from channel_groups.json
+nasaloral,nasaloral,NASAL_PRESSURE,nasal_pressure,RESP,20,official_channel_table,1,resp
+nasalp,NasalP,NASAL_PRESSURE,nasal_pressure,RESP,20,sleepfm_group_backfill,1,from channel_groups.json
+nasalsn,NasalSn,NASAL_PRESSURE,nasal_pressure,RESP,20,sleepfm_group_backfill,1,from channel_groups.json
+npt,npt,NASAL_PRESSURE,nasal_pressure,RESP,20,official_channel_table,1,resp
+nptaf,nptaf,NASAL_PRESSURE,nasal_pressure,RESP,20,official_channel_table,1,resp
+pressure,pressure,NASAL_PRESSURE,nasal_pressure,RESP,20,official_channel_table,1,resp
+ptaf,ptaf,NASAL_PRESSURE,nasal_pressure,RESP,20,official_channel_table,1,resp
+chest,chest,CHEST,chest,RESP,30,official_channel_table,1,resp
+chest #1,CHEST #1,CHEST,chest,RESP,30,sleepfm_group_backfill,1,from channel_groups.json
+chest effort,Chest Effort,CHEST,chest,RESP,30,sleepfm_group_backfill,1,from channel_groups.json
+chest res,chest res,CHEST,chest,RESP,30,official_channel_table,1,resp
+chestdc,ChestDC,CHEST,chest,RESP,30,sleepfm_group_backfill,1,from channel_groups.json
+effort tho,effort tho,CHEST,chest,RESP,30,official_channel_table,1,resp
+respitrace chest,respitrace chest,CHEST,chest,RESP,30,official_channel_table,1,resp
+rip thora,RIP Thora,CHEST,chest,RESP,30,sleepfm_group_backfill,1,from channel_groups.json
+rip thorax,RIP Thorax,CHEST,chest,RESP,30,sleepfm_group_backfill,1,from channel_groups.json
+thor,thor,CHEST,chest,RESP,30,official_channel_table,1,resp
+thor effort,THOR EFFORT,CHEST,chest,RESP,30,sleepfm_group_backfill,1,from channel_groups.json
+thor res,thor res,CHEST,chest,RESP,30,official_channel_table,1,resp
+thoracic,thoracic,CHEST,chest,RESP,30,official_channel_table,1,resp
+thoracic effort,thoracic effort,CHEST,chest,RESP,30,official_channel_table,1,resp
+thoracic res,thoracic res,CHEST,chest,RESP,30,official_channel_table,1,resp
+thorax,thorax,CHEST,chest,RESP,30,official_channel_table,1,resp
+abd,abd,ABDOMINAL,abdomen,RESP,40,official_channel_table,1,resp
+abd res,abd res,ABDOMINAL,abdomen,RESP,40,official_channel_table,1,resp
+abd-chest,Abd:Chest,ABDOMINAL,abdomen,RESP,40,sleepfm_group_backfill,1,from channel_groups.json
+abddc,AbdDC,ABDOMINAL,abdomen,RESP,40,sleepfm_group_backfill,1,from channel_groups.json
+abdm,ABDM,ABDOMINAL,abdomen,RESP,40,sleepfm_group_backfill,1,from channel_groups.json
+abdo,abdo,ABDOMINAL,abdomen,RESP,40,official_channel_table,1,resp
+abdo effort,ABDO EFFORT,ABDOMINAL,abdomen,RESP,40,sleepfm_group_backfill,1,from channel_groups.json
+abdo res,abdo res,ABDOMINAL,abdomen,RESP,40,official_channel_table,1,resp
+abdom,abdom,ABDOMINAL,abdomen,RESP,40,official_channel_table,1,resp
+abdomen,abdomen,ABDOMINAL,abdomen,RESP,40,official_channel_table,1,resp
+abdominal,abdominal,ABDOMINAL,abdomen,RESP,40,official_channel_table,1,resp
+abdominal effort,abdominal effort,ABDOMINAL,abdomen,RESP,40,official_channel_table,1,resp
+effort abd,effort abd,ABDOMINAL,abdomen,RESP,40,official_channel_table,1,resp
+p.abdomen,p.Abdomen,ABDOMINAL,abdomen,RESP,40,sleepfm_group_backfill,1,from channel_groups.json
+respitrace abdom,respitrace abdom,ABDOMINAL,abdomen,RESP,40,official_channel_table,1,resp
+rip abdom,RIP Abdom,ABDOMINAL,abdomen,RESP,40,sleepfm_group_backfill,1,from channel_groups.json
+rip abdomen,RIP Abdomen,ABDOMINAL,abdomen,RESP,40,sleepfm_group_backfill,1,from channel_groups.json
+gnd-spo2,gnd-spo2,SaO2,spo2,RESP,50,official_channel_table,1,resp
+o2 sat,o2 sat,SaO2,spo2,RESP,50,official_channel_table,1,resp
+o2-sat,o2-sat,SaO2,spo2,RESP,50,official_channel_table,1,resp
+o2-saturation,o2-saturation,SaO2,spo2,RESP,50,official_channel_table,1,resp
+o2sat,o2sat,SaO2,spo2,RESP,50,official_channel_table,1,resp
+osat,osat,SaO2,spo2,RESP,50,official_channel_table,1,resp
+sao2,sao2,SaO2,spo2,RESP,50,official_channel_table,1,resp
+sao2 masimo,SaO2_Masimo,SaO2,spo2,RESP,50,sleepfm_group_backfill,1,from channel_groups.json
+sentecspo2,SentecSpO2,SaO2,spo2,RESP,50,sleepfm_group_backfill,1,from channel_groups.json
+spo2,spo2,SaO2,spo2,RESP,50,official_channel_table,1,resp
+spo2 masimo,SpO2 Masimo,SaO2,spo2,RESP,50,sleepfm_group_backfill,1,from channel_groups.json
+spo2-0,SpO2-0,SaO2,spo2,RESP,50,sleepfm_group_backfill,1,from channel_groups.json
+spo2-1,SpO2-1,SaO2,spo2,RESP,50,sleepfm_group_backfill,1,from channel_groups.json
+tcspo2,TcSpO2,SaO2,spo2,RESP,50,sleepfm_group_backfill,1,from channel_groups.json
+finger ppg,Finger PPG,PULSE,pulse_ppg,RESP,55,sleepfm_group_backfill,1,from channel_groups.json
+h.r.,H.R.,PULSE,pulse_ppg,RESP,55,sleepfm_group_backfill,1,from channel_groups.json
+heartrate,Heartrate,PULSE,pulse_ppg,RESP,55,sleepfm_group_backfill,1,from channel_groups.json
+hr,HR,PULSE,pulse_ppg,RESP,55,sleepfm_group_backfill,1,from channel_groups.json
+hrate,HRate,PULSE,pulse_ppg,RESP,55,sleepfm_group_backfill,1,from channel_groups.json
+ppg,PPG,PULSE,pulse_ppg,RESP,55,sleepfm_group_backfill,1,from channel_groups.json
+ppg masimo,PPG Masimo,PULSE,pulse_ppg,RESP,55,sleepfm_group_backfill,1,from channel_groups.json
+ppg-masimo,PPG-Masimo,PULSE,pulse_ppg,RESP,55,sleepfm_group_backfill,1,from channel_groups.json
+pulse,Pulse,PULSE,pulse_ppg,RESP,55,sleepfm_group_backfill,1,from channel_groups.json
+pulse rate,Pulse Rate,PULSE,pulse_ppg,RESP,55,sleepfm_group_backfill,1,from channel_groups.json
+pulse-0,Pulse-0,PULSE,pulse_ppg,RESP,55,sleepfm_group_backfill,1,from channel_groups.json
+pulse-1,Pulse-1,PULSE,pulse_ppg,RESP,55,sleepfm_group_backfill,1,from channel_groups.json
+pulser,PulseR,PULSE,pulse_ppg,RESP,55,sleepfm_group_backfill,1,from channel_groups.json
+pulsera,PulseRa,PULSE,pulse_ppg,RESP,55,sleepfm_group_backfill,1,from channel_groups.json
+pulserate,PulseRate,PULSE,pulse_ppg,RESP,55,sleepfm_group_backfill,1,from channel_groups.json
+sentecppg,SentecPPG,PULSE,pulse_ppg,RESP,55,sleepfm_group_backfill,1,from channel_groups.json
+tcppg,TcPPG,PULSE,pulse_ppg,RESP,55,sleepfm_group_backfill,1,from channel_groups.json
+tosca pulse,Tosca_Pulse,PULSE,pulse_ppg,RESP,55,sleepfm_group_backfill,1,from channel_groups.json
+mic,Mic,SNORE,snore,RESP,56,sleepfm_group_backfill,1,from channel_groups.json
+p-snore,P-Snore,SNORE,snore,RESP,56,sleepfm_group_backfill,1,from channel_groups.json
+pressure snore,Pressure Snore,SNORE,snore,RESP,56,sleepfm_group_backfill,1,from channel_groups.json
+snore,Snore,SNORE,snore,RESP,56,sleepfm_group_backfill,1,from channel_groups.json
+snore cu,Snore_CU,SNORE,snore,RESP,56,sleepfm_group_backfill,1,from channel_groups.json
+snore-db,Snore-db,SNORE,snore,RESP,56,sleepfm_group_backfill,1,from channel_groups.json
+snore1,Snore1,SNORE,snore,RESP,56,sleepfm_group_backfill,1,from channel_groups.json
+snore2,Snore2,SNORE,snore,RESP,56,sleepfm_group_backfill,1,from channel_groups.json
+snoreg,Snoreg,SNORE,snore,RESP,56,sleepfm_group_backfill,1,from channel_groups.json
+c flow,c flow,CFLOW,cpap_flow,RESP,60,official_channel_table,1,resp
+c-flow,c-flow,CFLOW,cpap_flow,RESP,60,official_channel_table,1,resp
+cflow,cflow,CFLOW,cpap_flow,RESP,60,official_channel_table,1,resp
+cflowext,cflowext,CFLOW,cpap_flow,RESP,60,official_channel_table,1,resp
+cflowresmed,cflowresmed,CFLOW,cpap_flow,RESP,60,official_channel_table,1,resp
+cpap flow,cpap flow,CFLOW,cpap_flow,RESP,60,official_channel_table,1,resp
+c press,c press,CPAP_PRESSURE,cpap_pressure,RESP,70,official_channel_table,1,resp
+c-pres,c-pres,CPAP_PRESSURE,cpap_pressure,RESP,70,official_channel_table,1,resp
+c-press,c-press,CPAP_PRESSURE,cpap_pressure,RESP,70,official_channel_table,1,resp
+cpap pres,cpap pres,CPAP_PRESSURE,cpap_pressure,RESP,70,official_channel_table,1,resp
+cpap press,cpap_press,CPAP_PRESSURE,cpap_pressure,RESP,70,official_channel_table,1,resp
+cpap pressure,cpap pressure,CPAP_PRESSURE,cpap_pressure,RESP,70,official_channel_table,1,resp
+cpap pressure 1,cpap pressure 1,CPAP_PRESSURE,cpap_pressure,RESP,70,official_channel_table,1,resp
+cpap-pressure,cpap-pressure,CPAP_PRESSURE,cpap_pressure,RESP,70,official_channel_table,1,resp
+cpres,cpres,CPAP_PRESSURE,cpap_pressure,RESP,70,official_channel_table,1,resp
+cpress,cpress,CPAP_PRESSURE,cpap_pressure,RESP,70,official_channel_table,1,resp
+cpressure,cpressure,CPAP_PRESSURE,cpap_pressure,RESP,70,official_channel_table,1,resp
+heart rate,Heart Rate,HEART RATE,resp,RESP,995,sleepfm_group_backfill,1,from channel_groups.json
+heart rate cu,Heart Rate_CU,HEART RATE_CU,resp,RESP,995,sleepfm_group_backfill,1,from channel_groups.json
+n.press,N.Press,N.PRESS,resp,RESP,995,sleepfm_group_backfill,1,from channel_groups.json
+nasor,NasOr,NASOR,resp,RESP,995,sleepfm_group_backfill,1,from channel_groups.json
+new a,New A,NEW A,resp,RESP,995,sleepfm_group_backfill,1,from channel_groups.json
+new air,NEW AIR,NEW AIR,resp,RESP,995,sleepfm_group_backfill,1,from channel_groups.json
+newair,NEWAIR,NEWAIR,resp,RESP,995,sleepfm_group_backfill,1,from channel_groups.json
+o2-masimo,O2-Masimo,O2-MASIMO,resp,RESP,995,sleepfm_group_backfill,1,from channel_groups.json
+o2 masimo,O2_Masimo,O2_MASIMO,resp,RESP,995,sleepfm_group_backfill,1,from channel_groups.json
+oral,Oral,ORAL,resp,RESP,995,sleepfm_group_backfill,1,from channel_groups.json
+oral-co2,Oral-CO2,ORAL-CO2,resp,RESP,995,sleepfm_group_backfill,1,from channel_groups.json
+sa02,Sa02,SA02,resp,RESP,995,sleepfm_group_backfill,1,from channel_groups.json
+snor,SNOR,SNOR,resp,RESP,995,sleepfm_group_backfill,1,from channel_groups.json
+snoring,Snoring,SNORING,resp,RESP,995,sleepfm_group_backfill,1,from channel_groups.json
+snoring2,Snoring2,SNORING2,resp,RESP,995,sleepfm_group_backfill,1,from channel_groups.json
+snoring2a,Snoring2a,SNORING2A,resp,RESP,995,sleepfm_group_backfill,1,from channel_groups.json
+sum rip,Sum RIP,SUM RIP,resp,RESP,995,sleepfm_group_backfill,1,from channel_groups.json
+sum.rips,Sum.RIPs,SUM.RIPS,resp,RESP,995,sleepfm_group_backfill,1,from channel_groups.json
+ecg,ecg,EKG,ecg,EKG,10,official_channel_table,1,ecg
+ecg #1,ECG #1,EKG,ecg,EKG,10,sleepfm_group_backfill,1,from channel_groups.json
+ecg #2,ECG #2,EKG,ecg,EKG,10,sleepfm_group_backfill,1,from channel_groups.json
+ecg 2,ECG 2,EKG,ecg,EKG,10,sleepfm_group_backfill,1,from channel_groups.json
+ecg i,ecg i,EKG,ecg,EKG,10,official_channel_table,1,ecg
+ecg i2,ECG I2,EKG,ecg,EKG,10,sleepfm_group_backfill,1,from channel_groups.json
+ecg ii,ecg ii,EKG,ecg,EKG,10,official_channel_table,1,ecg
+ecg iihf,ECG IIHF,EKG,ecg,EKG,10,sleepfm_group_backfill,1,from channel_groups.json
+ecg l,ecg l,EKG,ecg,EKG,10,official_channel_table,1,ecg
+ecg l-ecg r,ECG L-ECG R,EKG,ecg,EKG,10,sleepfm_group_backfill,1,from channel_groups.json
+ecg r,ECG R,EKG,ecg,EKG,10,sleepfm_group_backfill,1,from channel_groups.json
+ecg ref-ecg1,ecg ref-ecg1,EKG,ecg,EKG,10,official_channel_table,1,ecg
+ecg ref-ecg2,ecg ref-ecg2,EKG,ecg,EKG,10,official_channel_table,1,ecg
+ecg ref-ecg3,ecg ref-ecg3,EKG,ecg,EKG,10,official_channel_table,1,ecg
+ecg-la,ecg-la,EKG,ecg,EKG,10,official_channel_table,1,ecg
+ecg-ll,ecg-ll,EKG,ecg,EKG,10,official_channel_table,1,ecg
+ecg-ra,ecg-ra,EKG,ecg,EKG,10,official_channel_table,1,ecg
+ecg-v1,ecg-v1,EKG,ecg,EKG,10,official_channel_table,1,ecg
+ecg-v2,ecg-v2,EKG,ecg,EKG,10,official_channel_table,1,ecg
+ecg1,ecg1,EKG,ecg,EKG,10,official_channel_table,1,ecg
+ecg1-ec,ECG1-EC,EKG,ecg,EKG,10,sleepfm_group_backfill,1,from channel_groups.json
+ecg1-ecg2,ECG1-ECG2,EKG,ecg,EKG,10,sleepfm_group_backfill,1,from channel_groups.json
+ecg2,ecg2,EKG,ecg,EKG,10,official_channel_table,1,ecg
+ecgi,ECGI,EKG,ecg,EKG,10,sleepfm_group_backfill,1,from channel_groups.json
+ecgi-0,ECGI-0,EKG,ecg,EKG,10,sleepfm_group_backfill,1,from channel_groups.json
+ecgi-1,ECGI-1,EKG,ecg,EKG,10,sleepfm_group_backfill,1,from channel_groups.json
+ecgii,ECGII,EKG,ecg,EKG,10,sleepfm_group_backfill,1,from channel_groups.json
+ecgii-0,ECGII-0,EKG,ecg,EKG,10,sleepfm_group_backfill,1,from channel_groups.json
+ecgii-1,ECGII-1,EKG,ecg,EKG,10,sleepfm_group_backfill,1,from channel_groups.json
+ecgl,ecgl,EKG,ecg,EKG,10,official_channel_table,1,ecg
+ecgr,ECGR,EKG,ecg,EKG,10,sleepfm_group_backfill,1,from channel_groups.json
+ekg,ekg,EKG,ecg,EKG,10,official_channel_table,1,ecg
+ekg #1,EKG #1,EKG,ecg,EKG,10,sleepfm_group_backfill,1,from channel_groups.json
+ekg #2,EKG #2,EKG,ecg,EKG,10,sleepfm_group_backfill,1,from channel_groups.json
+ekg l-cz,EKG_L-Cz,EKG,ecg,EKG,10,sleepfm_group_backfill,1,from channel_groups.json
+ekg r-cz,EKG_R-Cz,EKG,ecg,EKG,10,sleepfm_group_backfill,1,from channel_groups.json
+ekg-l,ekg-l,EKG,ecg,EKG,10,official_channel_table,1,ecg
+ekg-r,ekg-r,EKG,ecg,EKG,10,official_channel_table,1,ecg
+ekg1,EKG1,EKG,ecg,EKG,10,sleepfm_group_backfill,1,from channel_groups.json
+ekg2,EKG2,EKG,ecg,EKG,10,sleepfm_group_backfill,1,from channel_groups.json
+chin,chin,CHIN,chin_emg,EMG,10,official_channel_table,1,chin emg
+chin 1-chin 2,Chin 1-Chin 2,CHIN,chin_emg,EMG,10,sleepfm_group_backfill,1,from channel_groups.json
+chin 3,Chin 3,CHIN,chin_emg,EMG,10,sleepfm_group_backfill,1,from channel_groups.json
+chin ctr-cz,Chin_Ctr-Cz,CHIN,chin_emg,EMG,10,sleepfm_group_backfill,1,from channel_groups.json
+chin emg,chin_emg,CHIN,chin_emg,EMG,10,official_channel_table,1,chin emg
+chin l-chin-ctr,Chin_L-Chin-Ctr,CHIN,chin_emg,EMG,10,sleepfm_group_backfill,1,from channel_groups.json
+chin l-cz,Chin_L-Cz,CHIN,chin_emg,EMG,10,sleepfm_group_backfill,1,from channel_groups.json
+chin r-chin ctr,Chin_R-Chin_Ctr,CHIN,chin_emg,EMG,10,sleepfm_group_backfill,1,from channel_groups.json
+chin r-cz,Chin_R-Cz,CHIN,chin_emg,EMG,10,sleepfm_group_backfill,1,from channel_groups.json
+chin-a,chin-a,CHIN,chin_emg,EMG,10,official_channel_table,1,chin emg
+chin-chin2,Chin:Chin2,CHIN,chin_emg,EMG,10,sleepfm_group_backfill,1,from channel_groups.json
+chin-chin2-chin,Chin:Chin2:Chin,CHIN,chin_emg,EMG,10,sleepfm_group_backfill,1,from channel_groups.json
+chin-ctr,Chin-Ctr,CHIN,chin_emg,EMG,10,sleepfm_group_backfill,1,from channel_groups.json
+chin-ric,Chin:RIC,CHIN,chin_emg,EMG,10,sleepfm_group_backfill,1,from channel_groups.json
+chin1-c,CHIN1-C,CHIN,chin_emg,EMG,10,sleepfm_group_backfill,1,from channel_groups.json
+chin1-chin2,chin1-chin2,CHIN,chin_emg,EMG,10,official_channel_table,1,chin emg
+chin1-chin3,chin1-chin3,CHIN,chin_emg,EMG,10,official_channel_table,1,chin emg
+chin1chin2,chin1chin2,CHIN,chin_emg,EMG,10,official_channel_table,1,chin emg
+chin2 emg,Chin2 EMG,CHIN,chin_emg,EMG,10,sleepfm_group_backfill,1,from channel_groups.json
+chin2-c,CHIN2-C,CHIN,chin_emg,EMG,10,sleepfm_group_backfill,1,from channel_groups.json
+chin2-chin,Chin2:Chin,CHIN,chin_emg,EMG,10,sleepfm_group_backfill,1,from channel_groups.json
+chin3,CHIN3,CHIN,chin_emg,EMG,10,sleepfm_group_backfill,1,from channel_groups.json
+china,china,CHIN,chin_emg,EMG,10,official_channel_table,1,chin emg
+chinemg,CHINEMG,CHIN,chin_emg,EMG,10,sleepfm_group_backfill,1,from channel_groups.json
+emg,emg,CHIN,chin_emg,EMG,10,official_channel_table,1,chin emg
+emg chin,emg chin,CHIN,chin_emg,EMG,10,official_channel_table,1,chin emg
+emg-chin,emg-chin,CHIN,chin_emg,EMG,10,official_channel_table,1,chin emg
+emg.subm,emg.subm,CHIN,chin_emg,EMG,10,official_channel_table,1,chin emg
+emg1-emg2,emg1-emg2,CHIN,chin_emg,EMG,10,official_channel_table,1,chin emg
+l chin-r chin,L Chin-R Chin,CHIN,chin_emg,EMG,10,sleepfm_group_backfill,1,from channel_groups.json
+lchin,LChin,CHIN,chin_emg,EMG,10,sleepfm_group_backfill,1,from channel_groups.json
+left masseter 1,Left Masseter 1,CHIN,chin_emg,EMG,10,sleepfm_group_backfill,1,from channel_groups.json
+left masseter 2,Left Masseter 2,CHIN,chin_emg,EMG,10,sleepfm_group_backfill,1,from channel_groups.json
+masseter 1,Masseter 1,CHIN,chin_emg,EMG,10,sleepfm_group_backfill,1,from channel_groups.json
+masseter 2,Masseter 2,CHIN,chin_emg,EMG,10,sleepfm_group_backfill,1,from channel_groups.json
+masseter-l,Masseter-L,CHIN,chin_emg,EMG,10,sleepfm_group_backfill,1,from channel_groups.json
+masseter-r,Masseter-R,CHIN,chin_emg,EMG,10,sleepfm_group_backfill,1,from channel_groups.json
+rchin,RChin,CHIN,chin_emg,EMG,10,sleepfm_group_backfill,1,from channel_groups.json
+right masseter 1,Right Masseter 1,CHIN,chin_emg,EMG,10,sleepfm_group_backfill,1,from channel_groups.json
+right masseter 2,Right Masseter 2,CHIN,chin_emg,EMG,10,sleepfm_group_backfill,1,from channel_groups.json
+right-masseter1,Right-Masseter1,CHIN,chin_emg,EMG,10,sleepfm_group_backfill,1,from channel_groups.json
+scalene,Scalene,CHIN,chin_emg,EMG,10,sleepfm_group_backfill,1,from channel_groups.json
+scm,SCM,CHIN,chin_emg,EMG,10,sleepfm_group_backfill,1,from channel_groups.json
+chin 1,chin 1,CHIN1,chin_emg,EMG,11,official_channel_table,1,chin emg
+chin emg 1,chin emg 1,CHIN1,chin_emg,EMG,11,official_channel_table,1,chin emg
+chin emg1,chin_emg1,CHIN1,chin_emg,EMG,11,official_channel_table,1,chin emg
+chin l,chin l,CHIN1,chin_emg,EMG,11,official_channel_table,1,chin emg
+chin-l,chin-l,CHIN1,chin_emg,EMG,11,official_channel_table,1,chin emg
+chin1,chin1,CHIN1,chin_emg,EMG,11,official_channel_table,1,chin emg
+chinl,chinl,CHIN1,chin_emg,EMG,11,official_channel_table,1,chin emg
+emg1,emg1,CHIN1,chin_emg,EMG,11,official_channel_table,1,chin emg
+l chin,l chin,CHIN1,chin_emg,EMG,11,official_channel_table,1,chin emg
+chin 2,chin 2,CHIN2,chin_emg,EMG,12,official_channel_table,1,chin emg
+chin emg 2,chin emg 2,CHIN2,chin_emg,EMG,12,official_channel_table,1,chin emg
+chin emg2,chin_emg2,CHIN2,chin_emg,EMG,12,official_channel_table,1,chin emg
+chin r,chin r,CHIN2,chin_emg,EMG,12,official_channel_table,1,chin emg
+chin-r,chin-r,CHIN2,chin_emg,EMG,12,official_channel_table,1,chin emg
+chin2,chin2,CHIN2,chin_emg,EMG,12,official_channel_table,1,chin emg
+chinr,chinr,CHIN2,chin_emg,EMG,12,official_channel_table,1,chin emg
+emg2,emg2,CHIN2,chin_emg,EMG,12,official_channel_table,1,chin emg
+r chin,r chin,CHIN2,chin_emg,EMG,12,official_channel_table,1,chin emg
+gnd-leg l,gnd-leg l,LAT,leg_emg_left,EMG,20,official_channel_table,1,leg emg
+integral emg,Integral EMG,LAT,leg_emg_left,EMG,20,sleepfm_group_backfill,1,from channel_groups.json
+l emg,l emg,LAT,leg_emg_left,EMG,20,official_channel_table,1,leg emg
+l leg,l leg,LAT,leg_emg_left,EMG,20,official_channel_table,1,leg emg
+l-leg,l-leg,LAT,leg_emg_left,EMG,20,official_channel_table,1,leg emg
+lat,lat,LAT,leg_emg_left,EMG,20,official_channel_table,1,leg emg
+left leg,left leg,LAT,leg_emg_left,EMG,20,official_channel_table,1,leg emg
+leg 1,leg 1,LAT,leg_emg_left,EMG,20,official_channel_table,1,leg emg
+leg l,Leg L,LAT,leg_emg_left,EMG,20,sleepfm_group_backfill,1,from channel_groups.json
+leg(l),LEG(L),LAT,leg_emg_left,EMG,20,sleepfm_group_backfill,1,from channel_groups.json
+leg-l,leg-l,LAT,leg_emg_left,EMG,20,official_channel_table,1,leg emg
+leg1,leg1,LAT,leg_emg_left,EMG,20,official_channel_table,1,leg emg
+lemg,lemg,LAT,leg_emg_left,EMG,20,official_channel_table,1,leg emg
+lleg,lleg,LAT,leg_emg_left,EMG,20,official_channel_table,1,leg emg
+llegemg,LLEGEMG,LAT,leg_emg_left,EMG,20,sleepfm_group_backfill,1,from channel_groups.json
+plml,plml,LAT,leg_emg_left,EMG,20,official_channel_table,1,leg emg
+l-leg1,l-leg1,LLEG+,leg_emg_left,EMG,21,official_channel_table,1,leg emg
+lat 1,lat 1,LLEG+,leg_emg_left,EMG,21,official_channel_table,1,leg emg
+lat-u,lat-u,LLEG+,leg_emg_left,EMG,21,official_channel_table,1,leg emg
+lat1,lat1,LLEG+,leg_emg_left,EMG,21,official_channel_table,1,leg emg
+lleg plus,lleg+,LLEG+,leg_emg_left,EMG,21,official_channel_table,1,leg emg
+l-leg2,l-leg2,LLEG-,leg_emg_left,EMG,22,official_channel_table,1,leg emg
+lat 2,lat 2,LLEG-,leg_emg_left,EMG,22,official_channel_table,1,leg emg
+lat-l,lat-l,LLEG-,leg_emg_left,EMG,22,official_channel_table,1,leg emg
+lat2,lat2,LLEG-,leg_emg_left,EMG,22,official_channel_table,1,leg emg
+lleg-,lleg-,LLEG-,leg_emg_left,EMG,22,official_channel_table,1,leg emg
+emg-leg,emg-leg,RAT,leg_emg_right,EMG,30,official_channel_table,1,leg emg
+gnd-leg r,gnd-leg r,RAT,leg_emg_right,EMG,30,official_channel_table,1,leg emg
+l rat,l/rat,RAT,leg_emg_right,EMG,30,official_channel_table,1,leg emg
+leg,leg,RAT,leg_emg_right,EMG,30,official_channel_table,1,leg emg
+leg 2,leg 2,RAT,leg_emg_right,EMG,30,official_channel_table,1,leg emg
+leg r,Leg R,RAT,leg_emg_right,EMG,30,sleepfm_group_backfill,1,from channel_groups.json
+leg(r),LEG(R),RAT,leg_emg_right,EMG,30,sleepfm_group_backfill,1,from channel_groups.json
+leg-r,leg-r,RAT,leg_emg_right,EMG,30,official_channel_table,1,leg emg
+leg2,leg2,RAT,leg_emg_right,EMG,30,official_channel_table,1,leg emg
+legs,legs,RAT,leg_emg_right,EMG,30,official_channel_table,1,leg emg
+plmr,plmr,RAT,leg_emg_right,EMG,30,official_channel_table,1,leg emg
+r emg,r emg,RAT,leg_emg_right,EMG,30,official_channel_table,1,leg emg
+r leg,r leg,RAT,leg_emg_right,EMG,30,official_channel_table,1,leg emg
+r-leg,r-leg,RAT,leg_emg_right,EMG,30,official_channel_table,1,leg emg
+rat,rat,RAT,leg_emg_right,EMG,30,official_channel_table,1,leg emg
+remg,remg,RAT,leg_emg_right,EMG,30,official_channel_table,1,leg emg
+right leg,right leg,RAT,leg_emg_right,EMG,30,official_channel_table,1,leg emg
+rleg,rleg,RAT,leg_emg_right,EMG,30,official_channel_table,1,leg emg
+rlegemg,RLEGEMG,RAT,leg_emg_right,EMG,30,sleepfm_group_backfill,1,from channel_groups.json
+r-leg1,r-leg1,RLEG+,leg_emg_right,EMG,31,official_channel_table,1,leg emg
+rat 1,rat 1,RLEG+,leg_emg_right,EMG,31,official_channel_table,1,leg emg
+rat-u,rat-u,RLEG+,leg_emg_right,EMG,31,official_channel_table,1,leg emg
+rat1,rat1,RLEG+,leg_emg_right,EMG,31,official_channel_table,1,leg emg
+rleg plus,rleg+,RLEG+,leg_emg_right,EMG,31,official_channel_table,1,leg emg
+r-leg2,r-leg2,RLEG-,leg_emg_right,EMG,32,official_channel_table,1,leg emg
+rat 2,rat 2,RLEG-,leg_emg_right,EMG,32,official_channel_table,1,leg emg
+rat-l,rat-l,RLEG-,leg_emg_right,EMG,32,official_channel_table,1,leg emg
+rat2,rat2,RLEG-,leg_emg_right,EMG,32,official_channel_table,1,leg emg
+rleg-,rleg-,RLEG-,leg_emg_right,EMG,32,official_channel_table,1,leg emg
+arm,ARM,ARM_EMG,arm_emg,EMG,40,sleepfm_group_backfill,1,from channel_groups.json
+arm emg,Arm EMG,ARM_EMG,arm_emg,EMG,40,sleepfm_group_backfill,1,from channel_groups.json
+arm l,Arm l,ARM_EMG,arm_emg,EMG,40,sleepfm_group_backfill,1,from channel_groups.json
+arm left,ARM LEFT,ARM_EMG,arm_emg,EMG,40,sleepfm_group_backfill,1,from channel_groups.json
+arm r,Arm r,ARM_EMG,arm_emg,EMG,40,sleepfm_group_backfill,1,from channel_groups.json
+arm right,ARM RIGHT,ARM_EMG,arm_emg,EMG,40,sleepfm_group_backfill,1,from channel_groups.json
+arm-l,Arm-L,ARM_EMG,arm_emg,EMG,40,sleepfm_group_backfill,1,from channel_groups.json
+arm-r,Arm-R,ARM_EMG,arm_emg,EMG,40,sleepfm_group_backfill,1,from channel_groups.json
+arms,Arms,ARM_EMG,arm_emg,EMG,40,sleepfm_group_backfill,1,from channel_groups.json
+arms-1,Arms-1,ARM_EMG,arm_emg,EMG,40,sleepfm_group_backfill,1,from channel_groups.json
+arms-2,Arms-2,ARM_EMG,arm_emg,EMG,40,sleepfm_group_backfill,1,from channel_groups.json
+arms-l,Arms-L,ARM_EMG,arm_emg,EMG,40,sleepfm_group_backfill,1,from channel_groups.json
+arms-l ext,Arms-L Ext,ARM_EMG,arm_emg,EMG,40,sleepfm_group_backfill,1,from channel_groups.json
+arms-l flex,Arms-L Flex,ARM_EMG,arm_emg,EMG,40,sleepfm_group_backfill,1,from channel_groups.json
+arms-r,Arms-R,ARM_EMG,arm_emg,EMG,40,sleepfm_group_backfill,1,from channel_groups.json
+arms-r ext,Arms-R Ext,ARM_EMG,arm_emg,EMG,40,sleepfm_group_backfill,1,from channel_groups.json
+arms-r flex,Arms-R Flex,ARM_EMG,arm_emg,EMG,40,sleepfm_group_backfill,1,from channel_groups.json
+l arm,L Arm,ARM_EMG,arm_emg,EMG,40,sleepfm_group_backfill,1,from channel_groups.json
+l arm 1,L Arm 1,ARM_EMG,arm_emg,EMG,40,sleepfm_group_backfill,1,from channel_groups.json
+l arm 2,L Arm 2,ARM_EMG,arm_emg,EMG,40,sleepfm_group_backfill,1,from channel_groups.json
+l-arm,L-Arm,ARM_EMG,arm_emg,EMG,40,sleepfm_group_backfill,1,from channel_groups.json
+l-arm1,L-Arm1,ARM_EMG,arm_emg,EMG,40,sleepfm_group_backfill,1,from channel_groups.json
+l-arm2,L-Arm2,ARM_EMG,arm_emg,EMG,40,sleepfm_group_backfill,1,from channel_groups.json
+larm,LArm,ARM_EMG,arm_emg,EMG,40,sleepfm_group_backfill,1,from channel_groups.json
+r arm,R Arm,ARM_EMG,arm_emg,EMG,40,sleepfm_group_backfill,1,from channel_groups.json
+r arm 1,R Arm 1,ARM_EMG,arm_emg,EMG,40,sleepfm_group_backfill,1,from channel_groups.json
+r arm 2,R Arm 2,ARM_EMG,arm_emg,EMG,40,sleepfm_group_backfill,1,from channel_groups.json
+r-arm,R-Arm,ARM_EMG,arm_emg,EMG,40,sleepfm_group_backfill,1,from channel_groups.json
+r-arm1,R-Arm1,ARM_EMG,arm_emg,EMG,40,sleepfm_group_backfill,1,from channel_groups.json
+r-arm2,R-Arm2,ARM_EMG,arm_emg,EMG,40,sleepfm_group_backfill,1,from channel_groups.json
+rarm,RArm,ARM_EMG,arm_emg,EMG,40,sleepfm_group_backfill,1,from channel_groups.json
+right arm,Right arm,ARM_EMG,arm_emg,EMG,40,sleepfm_group_backfill,1,from channel_groups.json
+right arm 2,Right Arm 2,ARM_EMG,arm_emg,EMG,40,sleepfm_group_backfill,1,from channel_groups.json
+emg #1,EMG #1,EMG #1,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+emg #2,EMG #2,EMG #2,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+emg #3,EMG #3,EMG #3,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+emg aux1,EMG Aux1,EMG AUX1,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+emg aux12,EMG Aux12,EMG AUX12,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+emg aux2,EMG Aux2,EMG AUX2,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+emg3,EMG3,EMG3,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+emg4,EMG4,EMG4,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+emg5,EMG5,EMG5,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+emg6,EMG6,EMG6,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+emg-emg4,EMG:EMG4,EMG:EMG4,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+emgd1,EMGd1,EMGD1,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+emgd2,EMGd2,EMGD2,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+ext1,Ext1,EXT1,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+ext2,Ext2,EXT2,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+ext3,Ext3,EXT3,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+ext4,Ext4,EXT4,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+extensor-l,Extensor-L,EXTENSOR-L,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+extensor l-cz,Extensor_L-Cz,EXTENSOR_L-CZ,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+extensor r-cz,Extensor_R-Cz,EXTENSOR_R-CZ,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+feet-l,Feet-L,FEET-L,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+feet-r,Feet-R,FEET-R,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+flexor-l,Flexor-L,FLEXOR-L,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+flexor l-cz,Flexor_L-Cz,FLEXOR_L-CZ,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+flexor r-cz,Flexor_R-Cz,FLEXOR_R-CZ,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+foot,Foot,FOOT,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+foot-l,Foot-L,FOOT-L,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+foot-r,Foot-R,FOOT-R,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+interemg,InterEMG,INTEREMG,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+l leg 1,L Leg 1,L LEG 1,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+l leg 2,L Leg 2,L LEG 2,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+l-leg 1,L-LEG 1,L-LEG 1,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+l-leg 1-l-leg 2,L-Leg 1-L-Leg 2,L-LEG 1-L-LEG 2,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+l-leg 2,L-LEG 2,L-LEG 2,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+leg 12,Leg 12,LEG 12,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+leg 22,Leg 22,LEG 22,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+legl,LegL,LEGL,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+legr,LegR,LEGR,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+legsl-leg1,LegsL-Leg1,LEGSL-LEG1,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+mass-l,Mass-L,MASS-L,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+mass-lr,Mass-LR,MASS-LR,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+mass-r,Mass-R,MASS-R,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+massater 1,Massater 1,MASSATER 1,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+massater 2,Massater 2,MASSATER 2,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+masset.,Masset.,MASSET.,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+massete,MASSETE,MASSETE,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+pleth,Pleth,PLETH,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+pressur,Pressur,PRESSUR,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+r leg 1,R Leg 1,R LEG 1,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+r leg 2,R Leg 2,R LEG 2,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+r-leg 1,R-LEG 1,R-LEG 1,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+r-leg 2,R-LEG 2,R-LEG 2,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+r-leg1-r-leg2,R-Leg1-R-Leg2,R-LEG1-R-LEG2,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+ric emg,RIC EMG,RIC EMG,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+rip abd,RIP Abd,RIP ABD,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+rip tho,RIP Tho,RIP THO,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+should.,Should.,SHOULD.,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+temporalis-l,Temporalis-L,TEMPORALIS-L,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json
+temporalis-r,Temporalis-R,TEMPORALIS-R,emg,EMG,995,sleepfm_group_backfill,1,from channel_groups.json

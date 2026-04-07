@@ -192,15 +192,11 @@ def run_model(model, record, data_folder, verbose):
         encoder=encoder,
     )
 
-    batch = _move_batch(batch, device)
-
-    with torch.no_grad():
+    batch = _move_batch(batch, device)    with torch.no_grad():
         outputs = net(batch)
-        # The retrained model is optimized on the inverted target in dataloader.py,
-        # so sigmoid(logit) estimates P(not impaired). Convert back here to the
-        # official Challenge probability P(Cognitive_Impairment=True).
-        prob_not_impaired = torch.sigmoid(outputs["ci_logits"])[0].item()
-        prob = 1.0 - prob_not_impaired
+        # For the retrained model, sigmoid(logit) directly represents
+        # P(Cognitive_Impairment=True) in the official Challenge semantics.
+        prob = torch.sigmoid(outputs["ci_logits"])[0].item()
 
     binary = bool(prob >= threshold)
     return binary, float(prob)

@@ -192,7 +192,8 @@ def run_model(model, record, data_folder, verbose):
         encoder=encoder,
     )
 
-    batch = _move_batch(batch, device)    with torch.no_grad():
+    batch = _move_batch(batch, device) 
+    with torch.no_grad():
         outputs = net(batch)
         # For the retrained model, sigmoid(logit) directly represents
         # P(Cognitive_Impairment=True) in the official Challenge semantics.

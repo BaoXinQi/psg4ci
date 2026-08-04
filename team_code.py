@@ -1,399 +1,448 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+"""PhysioNet Challenge 2026 entry: D + CAISR + protected full-H residual."""
 
 from __future__ import annotations
 
-import warnings
-
-warnings.filterwarnings(
-    "ignore",
-    message="Channels contain different highpass filters.*",
-    category=RuntimeWarning,
-)
-warnings.filterwarnings(
-    "ignore",
-    message="Channels contain different lowpass filters.*",
-    category=RuntimeWarning,
-)
-warnings.filterwarnings(
-    "ignore",
-    message="Converting mask without torch.bool dtype to bool.*",
-    category=UserWarning,
-)
-
+import json
+import math
 import os
+import shutil
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
-from typing import Any, Dict, Optional, List
+from typing import Any
 
+import joblib
 import numpy as np
 import pandas as pd
 import torch
+from torch import nn
 
-from submission_train import train_submission
-from psg4ci_model import PSG4CIModel
-from dataloader import (
-    FixedDemographicsEncoder,
-    CAISR_CHANNELS,
-    MODALITIES,
-    PSG_SAMPLES_PER_TOKEN,
-    ANN_SAMPLES_PER_TOKEN,
-    load_demographics_table,
-    ann_to_token_level,
-    select_annotation_channels,
-)
-from channel_mapper import group_channels_for_sleepfm
-from cache_builder import (
-    infer_train_root,
-    build_index_by_basename,
-    find_matching_annotation_files,
-    read_and_optionally_resample,
-)
+from helper_code import *  # noqa: F401,F403
 
-# Optional import from the official template environment.
-try:
-    from helper_code import *  # noqa: F401,F403
-except Exception:
-    pass
+import online_features
+import train_large_structured_baselines_v1 as model_core
+
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-DEFAULT_RESUME_CHECKPOINT = SCRIPT_DIR / "psg4ci.pt"
-DEFAULT_SLEEPFM_REPO_DIR = SCRIPT_DIR / "sleepfm_core"
-DEFAULT_SUBMISSION_MODEL = "submission_model.pt"
+PRETRAINED_DIR = SCRIPT_DIR / "pretrained_model"
+MODEL_SUBDIR = "frozen_full_large"
+ADAPTATION_EPOCHS = 1
+ADAPTATION_LEARNING_RATE = 1e-6
+ADAPTATION_BATCH_SIZE = 128
 DEFAULT_THRESHOLD = 0.5
-TARGET_PSG_SFREQ = 128.0
-TARGET_ANN_SFREQ = 2.0
 
 
-################################################################################
-#
-# Required functions. Do not change the arguments.
-#
-################################################################################
+def _clean_identifier(value: Any) -> str:
+    if pd.isna(value):
+        return ""
+    if isinstance(value, (int, np.integer)):
+        return str(int(value))
+    if isinstance(value, (float, np.floating)) and np.isfinite(value) and float(value).is_integer():
+        return str(int(value))
+    return str(value).strip()
+
+
+def _parse_binary(value: Any) -> int | None:
+    if pd.isna(value):
+        return None
+    if isinstance(value, (bool, np.bool_)):
+        return int(value)
+    if isinstance(value, (int, np.integer, float, np.floating)) and float(value) in {0.0, 1.0}:
+        return int(value)
+    text = str(value).strip().lower()
+    if text in {"true", "t", "yes", "y", "1", "1.0", "positive"}:
+        return 1
+    if text in {"false", "f", "no", "n", "0", "0.0", "negative"}:
+        return 0
+    return None
+
+
+def _demographics_path(data_folder: Path) -> Path:
+    candidates = [data_folder / "demographics.csv", data_folder / "training_set" / "demographics.csv"]
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate
+    raise FileNotFoundError(f"Could not find demographics.csv under {data_folder}")
+
+
+def _data_root(data_folder: Path) -> Path:
+    if (data_folder / "physiological_data").is_dir():
+        return data_folder
+    if (data_folder / "training_set" / "physiological_data").is_dir():
+        return data_folder / "training_set"
+    raise FileNotFoundError(f"Could not find physiological_data under {data_folder}")
+
+
+def _row_value(row: pd.Series | dict, names: list[str], required: bool = True) -> Any:
+    for name in names:
+        if name in row and not pd.isna(row[name]) and str(row[name]).strip() != "":
+            return row[name]
+    if required:
+        raise KeyError(f"Missing required field; tried {names}")
+    return None
+
+
+def _record_parts(row: pd.Series | dict) -> tuple[str, str, str, str]:
+    patient_id = _clean_identifier(
+        _row_value(row, ["BidsFolder", "bids_folder", "patient_id", "PatientID"])
+    )
+    site_id = _clean_identifier(_row_value(row, ["SiteID", "site_id", "site"]))
+    session_id = _clean_identifier(
+        _row_value(row, ["SessionID", "session_id", "session"])
+    )
+    record_id = f"{patient_id}_ses-{session_id}"
+    return patient_id, site_id, session_id, record_id
+
+
+def _record_paths(data_root: Path, site_id: str, record_id: str) -> tuple[Path, Path | None]:
+    psg_path = data_root / "physiological_data" / site_id / f"{record_id}.edf"
+    if not psg_path.is_file():
+        matches = list((data_root / "physiological_data").glob(f"*/{record_id}.edf"))
+        if len(matches) == 1:
+            psg_path = matches[0]
+        else:
+            raise FileNotFoundError(f"PSG not found for {record_id}")
+    caisr_path = (
+        data_root
+        / "algorithmic_annotations"
+        / site_id
+        / f"{record_id}_caisr_annotations.edf"
+    )
+    if not caisr_path.is_file():
+        matches = list(
+            (data_root / "algorithmic_annotations").glob(
+                f"*/{record_id}_caisr_annotations.edf"
+            )
+        )
+        caisr_path = matches[0] if len(matches) == 1 else None
+    return psg_path, caisr_path
+
+
+def _demographic_features(row: pd.Series | dict) -> dict[str, Any]:
+    def value(names: list[str]) -> Any:
+        output = _row_value(row, names, required=False)
+        return np.nan if output is None else output
+
+    return {
+        "Age": value(["Age", "age"]),
+        "BMI": value(["BMI", "bmi"]),
+        "Sex": value(["Sex", "sex"]),
+        "Race": value(["Race", "race"]),
+        "Ethnicity": value(["Ethnicity", "ethnicity"]),
+    }
+
+
+def _extract_training_row(job: dict[str, Any]) -> dict[str, Any]:
+    row = job["row"]
+    try:
+        _, site_id, _, record_id = _record_parts(row)
+        psg_path, caisr_path = _record_paths(Path(job["data_root"]), site_id, record_id)
+        features = online_features.extract_caisr_features(psg_path, caisr_path, record_id)
+        output = {**_demographic_features(row), **features}
+        output.update(
+            {
+                "record_id": record_id,
+                "label": int(job["label"]),
+                "status": "ok",
+                "error": "",
+            }
+        )
+        return output
+    except Exception as exception:
+        return {
+            **_demographic_features(row),
+            "record_id": job.get("record_id", ""),
+            "label": int(job["label"]),
+            "status": "failed",
+            "error": repr(exception),
+        }
+
+
+def _copy_pretrained(model_folder: Path) -> Path:
+    if not (PRETRAINED_DIR / "_SUCCESS.json").is_file():
+        raise FileNotFoundError(f"Packaged pretrained model is incomplete: {PRETRAINED_DIR}")
+    destination = model_folder / MODEL_SUBDIR
+    if destination.exists():
+        shutil.rmtree(destination)
+    shutil.copytree(PRETRAINED_DIR, destination)
+    return destination
+
+
+def _load_schema(model_root: Path) -> dict[str, Any]:
+    return json.loads((model_root / "feature_schema.json").read_text(encoding="utf-8"))
+
+
+def _ensure_columns(frame: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
+    frame = frame.copy()
+    for column in columns:
+        if column not in frame:
+            frame[column] = np.nan
+    return frame
+
+
+def _load_anchor(seed_dir: Path, device: torch.device) -> tuple[Any, nn.Module]:
+    preprocessor = joblib.load(seed_dir / "anchor_preprocessor.joblib")
+    checkpoint = torch.load(seed_dir / "anchor_model.pt", map_location="cpu", weights_only=False)
+    model = model_core.MLP(int(checkpoint["input_dimension"]), dropout=0.30).to(device)
+    model.load_state_dict(checkpoint["state_dict"], strict=True)
+    return preprocessor, model
+
+
+def _adapt_anchor_models(
+    model_root: Path,
+    feature_frame: pd.DataFrame,
+    labels: np.ndarray,
+    schema: dict[str, Any],
+) -> list[dict[str, Any]]:
+    device = torch.device("cpu")
+    columns = schema["anchor_numeric_columns"] + schema["anchor_categorical_columns"]
+    feature_frame = _ensure_columns(feature_frame, columns)
+    metadata = json.loads((model_root / "metadata.json").read_text(encoding="utf-8"))
+    rows = []
+    positives = int(np.sum(labels == 1))
+    negatives = int(np.sum(labels == 0))
+    pos_weight = float(negatives / positives) if positives > 0 and negatives > 0 else 1.0
+
+    for seed in metadata["seeds"]:
+        seed_dir = model_root / f"seed_{seed}"
+        preprocessor, model = _load_anchor(seed_dir, device)
+        matrix = np.asarray(preprocessor.transform(feature_frame[columns]), dtype=np.float32)
+        features = torch.as_tensor(matrix, dtype=torch.float32, device=device)
+        targets = torch.as_tensor(labels, dtype=torch.float32, device=device)
+        model.eval()
+        with torch.no_grad():
+            before = model(features).cpu().numpy()
+
+        for parameter in model.parameters():
+            parameter.requires_grad = False
+        final_layer = model.network[-1]
+        for parameter in final_layer.parameters():
+            parameter.requires_grad = True
+
+        optimizer = torch.optim.AdamW(
+            final_layer.parameters(), lr=ADAPTATION_LEARNING_RATE, weight_decay=0.0
+        )
+        criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor(pos_weight, dtype=torch.float32))
+        generator = torch.Generator(device="cpu")
+        generator.manual_seed(int(seed) + 900000)
+        model.eval()
+        losses = []
+        for epoch in range(ADAPTATION_EPOCHS):
+            order = torch.randperm(len(labels), generator=generator)
+            for start in range(0, len(labels), ADAPTATION_BATCH_SIZE):
+                indices = order[start : start + ADAPTATION_BATCH_SIZE]
+                optimizer.zero_grad(set_to_none=True)
+                logits = model(features[indices])
+                loss = criterion(logits, targets[indices])
+                loss.backward()
+                optimizer.step()
+                losses.append(float(loss.detach()))
+
+        model.eval()
+        with torch.no_grad():
+            after = model(features).cpu().numpy()
+        delta = after - before
+        checkpoint = torch.load(seed_dir / "anchor_model.pt", map_location="cpu", weights_only=False)
+        checkpoint["state_dict"] = {key: value.detach().cpu() for key, value in model.state_dict().items()}
+        checkpoint["adaptation"] = {
+            "records": int(len(labels)),
+            "epochs": ADAPTATION_EPOCHS,
+            "learning_rate": ADAPTATION_LEARNING_RATE,
+            "mean_absolute_logit_delta": float(np.mean(np.abs(delta))),
+            "max_absolute_logit_delta": float(np.max(np.abs(delta))),
+        }
+        torch.save(checkpoint, seed_dir / "anchor_model.pt")
+        rows.append(
+            {
+                "seed": int(seed),
+                "records": int(len(labels)),
+                "epochs": ADAPTATION_EPOCHS,
+                "mean_loss": float(np.mean(losses)),
+                "mean_absolute_logit_delta": float(np.mean(np.abs(delta))),
+                "max_absolute_logit_delta": float(np.max(np.abs(delta))),
+            }
+        )
+    return rows
+
 
 def train_model(data_folder, model_folder, verbose):
     data_folder = Path(data_folder)
     model_folder = Path(model_folder)
     model_folder.mkdir(parents=True, exist_ok=True)
+    model_root = _copy_pretrained(model_folder)
+    schema = _load_schema(model_root)
 
-    if not DEFAULT_RESUME_CHECKPOINT.exists():
-        raise FileNotFoundError(
-            f"Expected pretrained checkpoint at {DEFAULT_RESUME_CHECKPOINT}. "
-            "Please place your renamed epoch18 checkpoint there."
+    demographics = pd.read_csv(_demographics_path(data_folder))
+    data_root = _data_root(data_folder)
+    jobs = []
+    for row in demographics.to_dict(orient="records"):
+        label = _parse_binary(
+            _row_value(
+                row,
+                ["Cognitive_Impairment", "cognitive_impairment", "label"],
+                required=False,
+            )
         )
+        if label is None:
+            continue
+        try:
+            _, _, _, record_id = _record_parts(row)
+        except Exception:
+            record_id = ""
+        jobs.append(
+            {"row": row, "label": label, "record_id": record_id, "data_root": str(data_root)}
+        )
+    if not jobs:
+        raise ValueError("No labeled training records were found")
 
-    result = train_submission(
-        data_folder=data_folder,
-        model_folder=model_folder,
-        resume_checkpoint=DEFAULT_RESUME_CHECKPOINT,
-        sleepfm_repo_dir=DEFAULT_SLEEPFM_REPO_DIR,
-        sleepfm_ckpt_path=None,
-        finetune_epochs=2,
-        cache_overwrite=False,
-        cache_limit_files=None,
-        verbose=int(verbose),
+    workers = max(1, min(8, os.cpu_count() or 1))
+    extracted = []
+    with ProcessPoolExecutor(max_workers=workers) as executor:
+        futures = [executor.submit(_extract_training_row, job) for job in jobs]
+        for completed, future in enumerate(as_completed(futures), start=1):
+            extracted.append(future.result())
+            if verbose and (completed == 1 or completed == len(futures) or completed % 250 == 0):
+                print(f"CAISR adaptation features: {completed}/{len(futures)}", flush=True)
+
+    feature_frame = pd.DataFrame(extracted)
+    failures = feature_frame[feature_frame["status"] != "ok"].copy()
+    feature_frame = feature_frame[feature_frame["status"] == "ok"].reset_index(drop=True)
+    required_successes = max(1, int(math.ceil(0.90 * len(jobs))))
+    if len(feature_frame) < required_successes:
+        raise RuntimeError(
+            f"Too few adaptation records succeeded: {len(feature_frame)}/{len(jobs)}"
+        )
+    labels = feature_frame["label"].to_numpy(dtype=int)
+    adaptation_rows = _adapt_anchor_models(model_root, feature_frame, labels, schema)
+
+    pd.DataFrame(adaptation_rows).to_csv(model_folder / "adaptation_history.csv", index=False)
+    failures.to_csv(model_folder / "adaptation_failures.csv", index=False)
+    (model_folder / "training_metadata.json").write_text(
+        json.dumps(
+            {
+                "labeled_records": len(jobs),
+                "adaptation_records": len(feature_frame),
+                "failed_records": len(failures),
+                "adaptation_epochs": ADAPTATION_EPOCHS,
+                "adaptation_learning_rate": ADAPTATION_LEARNING_RATE,
+                "psg_encoder_and_residual_frozen": True,
+                "anchor_trainable_part": "final_linear_layer",
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
     )
+    if verbose:
+        print(f"Saved adapted model to {model_root}", flush=True)
 
-    metadata = {
-        "submission_model": str(result["model_path"]),
-        "submission_config": str(result["config_path"]),
-        "submission_history": str(result["history_path"]),
-        "cache_dir": str(result["cache_dir"]),
-        "demog_path": str(result["demog_path"]),
-        "resume_checkpoint": str(DEFAULT_RESUME_CHECKPOINT),
-        "sleepfm_repo_dir": str(DEFAULT_SLEEPFM_REPO_DIR),
+
+def _load_seed_model(seed_dir: Path, device: torch.device, group_order: list[str]) -> dict[str, Any]:
+    anchor_preprocessor, anchor_model = _load_anchor(seed_dir, device)
+    projectors = {
+        group_name: joblib.load(seed_dir / f"{group_name}_projector.joblib")
+        for group_name in group_order
     }
-    (model_folder / "team_metadata.json").write_text(
-        pd.Series(metadata).to_json(), encoding="utf-8"
+    checkpoint = torch.load(
+        seed_dir / "balanced_pca_residual_model.pt", map_location="cpu", weights_only=False
     )
+    residual = model_core.ProtectedResidualHead(
+        int(checkpoint["input_dimension"]), dropout=0.30, initial_gate=0.10
+    ).to(device)
+    residual.load_state_dict(checkpoint["state_dict"], strict=True)
+    anchor_model.eval()
+    residual.eval()
+    return {
+        "anchor_preprocessor": anchor_preprocessor,
+        "anchor_model": anchor_model,
+        "projectors": projectors,
+        "residual_model": residual,
+    }
 
 
 def load_model(model_folder, verbose):
-    model_folder = Path(model_folder)
-    model_path = model_folder / DEFAULT_SUBMISSION_MODEL
-
-    if not model_path.exists():
-        raise FileNotFoundError(f"Trained submission model not found: {model_path}")
-
-    ckpt = torch.load(model_path, map_location="cpu")
-    enc_info = ckpt["demographics_encoder"]
-
-    encoder = FixedDemographicsEncoder(
-        numeric_cols=enc_info["numeric_cols"],
-        categorical_cols=enc_info["categorical_cols"],
-        category_levels=enc_info["category_levels"],
-    )
-    encoder.numeric_means = {k: float(v) for k, v in enc_info["numeric_means"].items()}
-    encoder.numeric_stds = {k: float(v) for k, v in enc_info["numeric_stds"].items()}
-    encoder.output_dim = int(enc_info["output_dim"])
-    encoder.is_fitted = True
-
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    model = PSG4CIModel(
-        demo_dim=encoder.output_dim,
-        freeze_sleepfm=True,
-        dropout=float(ckpt["config"].get("DROPOUT", 0.1)),
-        device_for_sleepfm=device,
-        sleepfm_chunk_batch=int(ckpt["config"].get("SLEEPFM_CHUNK_BATCH", 8)),
-        sleepfm_repo_dir=DEFAULT_SLEEPFM_REPO_DIR,
-        sleepfm_ckpt_path=None,
-    ).to(device)
-    model.load_state_dict(ckpt["model_state_dict"], strict=True)
-    model.eval()
-
-    state = {
-        "model": model,
+    model_root = Path(model_folder) / MODEL_SUBDIR
+    metadata = json.loads((model_root / "metadata.json").read_text(encoding="utf-8"))
+    schema = _load_schema(model_root)
+    device = torch.device("cpu")
+    seeds = [
+        _load_seed_model(model_root / f"seed_{seed}", device, schema["group_order"])
+        for seed in metadata["seeds"]
+    ]
+    if verbose:
+        print(f"Loaded {len(seeds)} frozen Large models", flush=True)
+    return {
+        "model_root": model_root,
+        "metadata": metadata,
+        "schema": schema,
         "device": device,
-        "encoder": encoder,
-        "threshold": float(ckpt["config"].get("threshold", DEFAULT_THRESHOLD)),
-        "demographics_df": None,
-        "basename_index": None,
-        "train_root": None,
+        "seeds": seeds,
+        "demographics_path": None,
+        "demographics": None,
+        "data_root": None,
     }
 
-    if verbose:
-        print(f"Loaded model from {model_path} on {device}")
 
-    return state
+def _lookup_demographics(state: dict[str, Any], data_folder: Path, record: dict) -> pd.Series:
+    path = _demographics_path(data_folder)
+    if state["demographics_path"] != str(path):
+        state["demographics"] = pd.read_csv(path)
+        state["demographics_path"] = str(path)
+        state["data_root"] = _data_root(data_folder)
+    patient_id, _, session_id, _ = _record_parts(record)
+    frame = state["demographics"]
+    mask = frame["BidsFolder"].astype(str).eq(patient_id)
+    if "SessionID" in frame:
+        mask &= frame["SessionID"].map(_clean_identifier).eq(session_id)
+    if not mask.any():
+        raise KeyError(f"Demographics row not found for {patient_id}/session {session_id}")
+    return frame.loc[mask].iloc[0]
+
+
+def _predict_from_features(state: dict[str, Any], frame: pd.DataFrame) -> float:
+    schema = state["schema"]
+    anchor_columns = schema["anchor_numeric_columns"] + schema["anchor_categorical_columns"]
+    all_columns = list(anchor_columns)
+    for group_name in schema["group_order"]:
+        all_columns.extend(schema["group_columns"][group_name])
+    frame = _ensure_columns(frame, list(dict.fromkeys(all_columns)))
+    logits = []
+    with torch.no_grad():
+        for seed in state["seeds"]:
+            anchor_matrix = np.asarray(
+                seed["anchor_preprocessor"].transform(frame[anchor_columns]), dtype=np.float32
+            )
+            anchor_tensor = torch.as_tensor(anchor_matrix, dtype=torch.float32)
+            anchor_logit = seed["anchor_model"](anchor_tensor)
+            projected = [
+                seed["projectors"][group_name].transform(frame)
+                for group_name in schema["group_order"]
+            ]
+            balanced = torch.as_tensor(
+                np.concatenate(projected, axis=1), dtype=torch.float32
+            )
+            correction, _ = seed["residual_model"](balanced)
+            logits.append(float((anchor_logit + correction)[0]))
+    return float(np.mean(logits))
 
 
 def run_model(model, record, data_folder, verbose):
     state = model
-    net = state["model"]
-    device = state["device"]
-    encoder = state["encoder"]
-    threshold = state.get("threshold", DEFAULT_THRESHOLD)
-
-    record_info = _parse_record(record)
-    patient_id = record_info["patient_id"]
-    site_id = record_info["site_id"]
-    session_id = record_info["session_id"]
-    file_name = f"{patient_id}_ses-{session_id}.edf"
-
     data_folder = Path(data_folder)
-    train_root = infer_train_root(data_folder)
-
-    if state["train_root"] != str(train_root) or state["demographics_df"] is None:
-        demog_path = _default_demographics_path(data_folder)
-        state["demographics_df"] = load_demographics_table(demog_path)
-        state["basename_index"] = build_index_by_basename(train_root)
-        state["train_root"] = str(train_root)
-
-    demog_df = state["demographics_df"]
-    basename_index = state["basename_index"]
-
-    row = _get_demographics_row(demog_df, patient_id, session_id, file_name)
-    batch = _build_single_record_batch(
-        row=row,
-        site_id=site_id,
-        file_name=file_name,
-        train_root=train_root,
-        basename_index=basename_index,
-        encoder=encoder,
-    )
-
-    batch = _move_batch(batch, device) 
-    with torch.no_grad():
-        outputs = net(batch)
-        # For the retrained model, sigmoid(logit) directly represents
-        # P(Cognitive_Impairment=True) in the official Challenge semantics.
-        prob = torch.sigmoid(outputs["ci_logits"])[0].item()
-
-    binary = bool(prob >= threshold)
-    return binary, float(prob)
-
-
-################################################################################
-#
-# Internal helpers
-#
-################################################################################
-
-def _default_demographics_path(data_folder: Path) -> Path:
-    candidates = [
-        data_folder / "training_set" / "demographics.csv",
-        data_folder / "demographics.csv",
-    ]
-    for path in candidates:
-        if path.exists():
-            return path
-    raise FileNotFoundError(f"Could not find demographics.csv under {data_folder}")
-
-
-def _parse_record(record: Dict[str, Any]) -> Dict[str, str]:
-    patient_id = _get_any(record, ["BidsFolder", "bids_folder", "patient_id", "PatientID"])
-    site_id = _get_any(record, ["SiteID", "site_id", "site"])
-    session_id = _get_any(record, ["SessionID", "session_id", "session"])
-    if patient_id is None or site_id is None or session_id is None:
-        raise ValueError(f"Could not parse required fields from record: keys={list(record.keys())}")
-    return {
-        "patient_id": str(patient_id),
-        "site_id": str(site_id),
-        "session_id": str(session_id),
-    }
-
-
-def _get_any(d: Dict[str, Any], keys: List[str]):
-    for key in keys:
-        if key in d and d[key] not in (None, ""):
-            return d[key]
-    return None
-
-
-def _get_demographics_row(df: pd.DataFrame, patient_id: str, session_id: str, file_name: str) -> pd.Series:
-    if "file_name" in df.columns:
-        m = df["file_name"].astype(str) == str(file_name)
-        if m.any():
-            return df.loc[m].iloc[0]
-
-    if "BidsFolder" in df.columns and "SessionID" in df.columns:
-        m = (df["BidsFolder"].astype(str) == str(patient_id)) & (df["SessionID"].astype(str) == str(session_id))
-        if m.any():
-            return df.loc[m].iloc[0]
-
-    raise KeyError(f"Could not find demographics row for {file_name}")
-
-
-def _build_single_record_batch(
-    row: pd.Series,
-    site_id: str,
-    file_name: str,
-    train_root: Path,
-    basename_index: Dict[str, List[Path]],
-    encoder: FixedDemographicsEncoder,
-) -> Dict[str, torch.Tensor]:
-    phys_file = train_root / "physiological_data" / site_id / file_name
-    if not phys_file.exists():
-        raise FileNotFoundError(f"Physiological EDF not found: {phys_file}")
-
-    psg_data, psg_ch_names, psg_sfreq, _ = read_and_optionally_resample(
-        phys_file, target_sfreq=TARGET_PSG_SFREQ, verbose=False
-    )
-    if abs(psg_sfreq - TARGET_PSG_SFREQ) > 1e-6:
-        raise ValueError(f"Unexpected PSG sfreq after resample: {psg_sfreq}")
-
-    grouped = group_channels_for_sleepfm(psg_ch_names, keep_unmatched=True, preserve_original_order=False)
-    grouped_channels = grouped["grouped"]
-
-    psg_arrays: Dict[str, np.ndarray] = {}
-    psg_channel_names: Dict[str, List[str]] = {}
-    psg_token_counts: Dict[str, int] = {}
-
-    psg_data = psg_data.astype(np.float32, copy=False)
-    for mod in MODALITIES:
-        mod_key = mod.upper()
-        channels = grouped_channels.get(mod_key, [])
-        if len(channels) == 0:
-            psg_arrays[mod] = np.zeros((0, 0, PSG_SAMPLES_PER_TOKEN), dtype=np.float32)
-            psg_channel_names[mod] = []
-            psg_token_counts[mod] = 0
-            continue
-
-        idxs = [int(ch.original_index) for ch in channels]
-        names = [str(ch.raw_name) for ch in channels]
-        arr = psg_data[idxs]
-        n_tokens = int(arr.shape[1]) // PSG_SAMPLES_PER_TOKEN
-        if n_tokens <= 0:
-            psg_arrays[mod] = np.zeros((len(idxs), 0, PSG_SAMPLES_PER_TOKEN), dtype=np.float32)
-            psg_channel_names[mod] = names
-            psg_token_counts[mod] = 0
-            continue
-
-        arr = arr[:, : n_tokens * PSG_SAMPLES_PER_TOKEN]
-        arr = arr.reshape(len(idxs), n_tokens, PSG_SAMPLES_PER_TOKEN).astype(np.float32, copy=False)
-        psg_arrays[mod] = arr
-        psg_channel_names[mod] = names
-        psg_token_counts[mod] = n_tokens
-
-    positive_psg_counts = [n for n in psg_token_counts.values() if n > 0]
-    if len(positive_psg_counts) == 0:
-        raise ValueError(f"No usable PSG tokens for {file_name}")
-
-    caisr_path, _ = find_matching_annotation_files(phys_file, basename_index)
-    has_caisr = False
-    caisr_tok = np.zeros((0, len(CAISR_CHANNELS)), dtype=np.float32)
-    caisr_channel_mask = np.zeros((len(CAISR_CHANNELS),), dtype=np.bool_)
-
-    if caisr_path is not None and Path(caisr_path).exists():
-        ann_data, ann_ch_names, ann_sfreq, _ = read_and_optionally_resample(
-            Path(caisr_path), target_sfreq=TARGET_ANN_SFREQ, verbose=False
+    row = _lookup_demographics(state, data_folder, record)
+    _, site_id, _, record_id = _record_parts(record)
+    psg_path, caisr_path = _record_paths(Path(state["data_root"]), site_id, record_id)
+    try:
+        psg_features, caisr_features = online_features.extract_all_features(
+            psg_path, caisr_path, record_id, site_id
         )
-        if abs(ann_sfreq - TARGET_ANN_SFREQ) <= 1e-6:
-            ann_tok = ann_to_token_level(ann_data)
-            ann_tok, ann_mask = select_annotation_channels(ann_tok, ann_ch_names, CAISR_CHANNELS)
-            caisr_channel_mask = ann_mask.astype(bool, copy=False)
-            if ann_tok.shape[0] > 0 and bool(caisr_channel_mask.any()):
-                has_caisr = True
-                caisr_tok = ann_tok.astype(np.float32, copy=False)
-
-    usable_candidates = list(positive_psg_counts)
-    if has_caisr:
-        usable_candidates.append(int(caisr_tok.shape[0]))
-
-    usable_n = int(min(usable_candidates)) if len(usable_candidates) > 0 else 0
-    if usable_n <= 0:
-        raise ValueError(f"No usable tokens after alignment for {file_name}")
-
-    chunk_tokens = 60
-    n_chunks = int(np.ceil(usable_n / chunk_tokens))
-    token_mask = np.zeros((1, n_chunks, chunk_tokens), dtype=np.bool_)
-    chunk_mask = np.zeros((1, n_chunks), dtype=np.bool_)
-
-    for j in range(n_chunks):
-        st = j * chunk_tokens
-        ed = min((j + 1) * chunk_tokens, usable_n)
-        if ed > st:
-            token_mask[0, j, : ed - st] = True
-            chunk_mask[0, j] = True
-
-    batch: Dict[str, Any] = {
-        "file_name": [file_name],
-        "site": [site_id],
-        "h5_path": [""],
-        "n_chunks": torch.tensor([n_chunks], dtype=torch.int64),
-        "token_mask": torch.from_numpy(token_mask),
-        "chunk_mask": torch.from_numpy(chunk_mask),
-        "caisr_chunks": torch.zeros((1, n_chunks, chunk_tokens, len(CAISR_CHANNELS)), dtype=torch.float32),
-        "caisr_channel_mask": torch.from_numpy(caisr_channel_mask.reshape(1, -1)),
-        "has_caisr": torch.tensor([[1.0 if has_caisr else 0.0]], dtype=torch.float32),
-        "demo_x": torch.from_numpy(encoder.transform_row(row).reshape(1, -1).astype(np.float32)),
-        "y": torch.zeros((1,), dtype=torch.float32),
-        "has_label": torch.tensor([False], dtype=torch.bool),
-    }
-
-    for mod in MODALITIES:
-        arr = psg_arrays[mod]
-        c = int(arr.shape[0])
-        chunks = np.zeros((1, n_chunks, chunk_tokens, c, PSG_SAMPLES_PER_TOKEN), dtype=np.float32)
-        n_tokens_mod = int(arr.shape[1])
-        if c > 0 and n_tokens_mod > 0:
-            tok = arr[:, : min(n_tokens_mod, usable_n), :]
-            tok = tok.transpose(1, 0, 2)
-            for j in range(n_chunks):
-                st = j * chunk_tokens
-                ed = min((j + 1) * chunk_tokens, tok.shape[0], usable_n)
-                if ed > st:
-                    chunks[0, j, : ed - st] = tok[st:ed]
-
-        batch[f"{mod}_chunks"] = torch.from_numpy(chunks)
-        batch[f"{mod}_channel_mask"] = torch.ones((1, c), dtype=torch.bool)
-        batch[f"{mod}_channel_names"] = [psg_channel_names[mod]]
-
-    if has_caisr:
-        for j in range(n_chunks):
-            st = j * chunk_tokens
-            ed = min((j + 1) * chunk_tokens, caisr_tok.shape[0], usable_n)
-            if ed > st:
-                batch["caisr_chunks"][0, j, : ed - st] = torch.from_numpy(caisr_tok[st:ed].astype(np.float32))
-
-    return batch
-
-
-def _move_batch(batch: Dict[str, Any], device: torch.device) -> Dict[str, Any]:
-    out = {}
-    for key, value in batch.items():
-        if isinstance(value, torch.Tensor):
-            out[key] = value.to(device)
-        else:
-            out[key] = value
-    return out
+    except Exception as exception:
+        if verbose:
+            print(f"PSG branch failed for {record_id}; using structured fallback: {exception}")
+        psg_features = {}
+        caisr_features = online_features.extract_caisr_features(psg_path, caisr_path, record_id)
+    feature_row = {**_demographic_features(row), **caisr_features, **psg_features}
+    logit = _predict_from_features(state, pd.DataFrame([feature_row]))
+    probability = 1.0 / (1.0 + math.exp(-float(np.clip(logit, -40.0, 40.0))))
+    return bool(probability >= DEFAULT_THRESHOLD), float(probability)

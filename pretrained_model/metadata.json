@@ -1,0 +1,44 @@
+{
+  "batch_size": 32,
+  "demographic_mapping": {
+    "Age": "Age",
+    "BMI": "BMI",
+    "Ethnicity": "Ethnicity",
+    "Race": "Race",
+    "Sex": "Sex"
+  },
+  "dropout": 0.3,
+  "ensemble": "mean_logit",
+  "fixed_epochs": 9,
+  "group_components": {
+    "ecg": 16,
+    "eeg_eog": 16,
+    "emg": 16,
+    "resp_spo2": 16
+  },
+  "group_feature_counts": {
+    "ecg": 142,
+    "eeg_eog": 1056,
+    "emg": 288,
+    "resp_spo2": 423
+  },
+  "initial_outer_gate": 0.1,
+  "manifest": "/raid/xba/physionet2026/official_large/modeling_v1/manifests/large_modeling_manifest_v1.parquet",
+  "minimum_nonmissing_fraction": 0.1,
+  "probability_transform": "sigmoid",
+  "psg_features": "/raid/xba/physionet2026/official_large/derived/psg_features_legacy16_v1/psg_physiological_features_legacy16_v1.parquet",
+  "reference_cv_age_conditioned_auroc": 0.8156814808347158,
+  "reference_cv_model": "large_baselines_5fold_v1/balanced_pca_residual/logit_ensemble",
+  "residual_penalty": 0.01,
+  "seeds": [
+    20262259,
+    20262260,
+    20262261
+  ],
+  "summary_feature_count": 85,
+  "summary_features": "/raid/xba/physionet2026/official_large/derived/caisr_features_v1/caisr_features_v1.parquet",
+  "threshold": 0.5,
+  "training_positives": 498,
+  "training_records": 6600,
+  "version": "full_large_submission_v1"
+}

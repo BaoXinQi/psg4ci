@@ -1,0 +1,11 @@
+{
+  "anchor_input_dimension": 165,
+  "balanced_input_dimension": 64,
+  "mean_absolute_residual_logit": 0.4511205591694373,
+  "mean_final_logit": -1.919427680963638,
+  "outer_gate": 0.12078651785850525,
+  "positives": 498,
+  "records": 6600,
+  "seed": 20262261,
+  "std_final_logit": 2.9828564606545456
+}

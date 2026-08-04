@@ -1,140 +1,49 @@
-# Python example code for the George B. Moody PhysioNet Challenge 2026
+# PhysioNet Challenge 2026: protected full-H residual ensemble
 
-## What's in this repository?
+This repository is a George B. Moody PhysioNet Challenge 2026 entry for predicting cognitive impairment from overnight polysomnography. It follows the official Python entry interface: `train_model.py`, `run_model.py`, and `helper_code.py` are unchanged from the official template, while the implementation is in `team_code.py` and supporting modules.
 
-This repository contains a simple example that illustrates how to format a Python entry for the [George B. Moody PhysioNet Challenge 2026](https://physionetchallenges.org/2026/). If you are participating in the 2026 Challenge, then we recommend using this repository as a template for your entry. You can remove some of the code, reuse other code, and add new code to create your entry. You do not need to use the models, features, and/or libraries in this example for your entry. We encourage a diversity of approaches to the Challenges.
+## Model
 
-For this example, we implemented a random forest model with several simple features. (This simple example is **not** designed to perform well, so you should **not** use it as a baseline for your approach's performance.) You can try it by running the following commands on the Challenge training set. If you are using a relatively recent personal computer, then you should be able to run these commands from start to finish on a small subset (1000 records) of the training data in a few minutes or less.
+The prediction is the mean logit from three seeded models. Each model contains:
 
-## How do I run these scripts?
+- a structured anchor MLP using age, BMI, sex, race, ethnicity, and CAISR-derived sleep-stage/event summaries;
+- modality-group PCA projections of full-night handcrafted PSG features;
+- a gated residual head whose correction is added to the anchor logit.
 
-First, you can download and create data for these scripts by following the [instructions](https://github.com/physionetchallenges/python-example-2026?tab=readme-ov-file#how-do-i-create-data-for-these-scripts) in the following section.
+The PSG residual branch and all preprocessing objects are packaged as pretrained artifacts. During the official training stage, the code processes every labeled record in the supplied training set to recreate demographics and CAISR features, then performs one epoch of low-learning-rate supervised updating of each anchor MLP's final linear layer. All other parameters remain frozen. This makes training inexpensive while ensuring that the submitted code continues training on the supplied data.
 
-Second, you can install the dependencies for these scripts by creating a Docker image (see below) or [virtual environment](https://docs.python.org/3/library/venv.html) and running
+At inference, the code reads the raw physiological EDF and CAISR annotation EDF, constructs the required canonical channels, extracts the full-night features, and averages the three model logits. If the physiological branch fails for an individual record, the entry falls back to its demographics and CAISR anchor instead of failing the complete run.
 
-    pip install -r requirements.txt
+## Pretraining data
 
-You can train your model by running
+The packaged model was trained only on the official PhysioNet Challenge 2026 Large training set:
 
-    python train_model.py -d training_data -m model
+- 6,600 labeled overnight records;
+- 498 positive cognitive-impairment labels;
+- training sites S0001, I0002, and I0006;
+- official demographics, raw PSG, CAISR annotations, and cognitive labels.
 
-where
+No validation/test labels, supplementary labels, external datasets, or test-time target adaptation were used. The final packaged artifacts were fitted on all 6,600 official Large training records with seeds 20262259, 20262260, and 20262261.
 
-- `training_data` (input; required) is a folder with the training data files, which must include the labels; and
-- `model` (output; required) is a folder for saving your model.
+Local diagnostics for the frozen architecture were an official challenge score of 0.815681 under the fixed five-fold split and 0.590174 under leave-one-site-out evaluation. These values describe local validation only and are not claimed leaderboard scores.
 
-You can run your trained model by running
+## Usage
 
-    python run_model.py -d holdout_data -m model -o holdout_outputs
+Install dependencies in Python 3.10, or build the included Docker image. PyTorch 2.0.1 CPU is installed separately in the Dockerfile.
 
-where
+```bash
+python train_model.py -d /path/to/training_data -m /path/to/model -v
+python run_model.py -d /path/to/holdout_data -m /path/to/model -o /path/to/outputs -v
+```
 
-- `holdout_data` (input; required) is a folder with the holdout data files, which will not necessarily include the labels;
-- `model` (input; required) is a folder for loading your model; and
-- `holdout_outputs` (output; required) is a folder for saving your model outputs.
+Build and run the container with the same commands described by the official example repository. The entry does not require a GPU and does not access the network at training or inference time.
 
-The [Challenge website](https://physionetchallenges.org/2026/#data) provides a training database with a description of the contents and structure of the data files.
+## Files
 
-You can evaluate your model by pulling or downloading the [evaluation code](https://github.com/physionetchallenges/evaluation-2026) and running
+- `team_code.py`: official training, loading, and inference entry points.
+- `online_features.py`: raw EDF to CAISR and PSG feature bridge.
+- `pretrained_model/`: the three full-data pretrained models and fitted preprocessors.
+- `caisr_feature_extractor.py`, `psg_feature_extractor.py`, `preprocessing_primitives.py`, `channel_mapper.py`: deterministic feature extraction.
+- `train_large_structured_baselines_v1.py`: model class definitions required to load the packaged artifacts.
 
-    python evaluate_model.py -d <path_to_labels> -o <path_to_outputs> -s <path_to_scores>
-
-where
-
-- `path_to_labels`(input; required) is the path to the csv file containing the labels for the holdout data files (e.g. demographics.csv);
-- `path_to_outputs` (input; required) is the path to the csv file with your model's outputs for the data (e.g. demographics.csv); and
-- `path_to_scores` (output; optional) is file with a collection of scores for your model (e.g., scores.txt).
-
-You can use the provided training set for the `training_data` and `holdout_data` files, but we will use different datasets for the validation and test sets, and we will not provide the labels to your code.
-
-## How do I create data for these scripts?
-
-Please see the [data](https://physionetchallenges.org/2026/#data) section of the website for more information about the Challenge data.
-
-## Which scripts I can edit?
-
-Please edit the following script to add your code:
-
-* `team_code.py` is a script with functions for training and running your trained model.
-
-Please do **not** edit the following scripts. We will use the unedited versions of these scripts when running your code:
-
-* `train_model.py` is a script for training your model.
-* `run_model.py` is a script for running your trained model.
-* `helper_code.py` is a script with helper functions that we used for our code. You are welcome to use them in your code.
-
-These scripts must remain in the root path of your repository, but you can put other scripts and other files elsewhere in your repository.
-
-## How do I train, save, load, and run my model?
-
-To train and save your model, please edit the `train_model` function in the `team_code.py` script. Please do not edit the input or output arguments of this function.
-
-To load and run your trained model, please edit the `load_model` and `run_model` functions in the `team_code.py` script. Please do not edit the input or output arguments of these functions.
-
-## How do I run these scripts in Docker?
-
-Docker and similar platforms allow you to containerize and package your code with specific dependencies so that your code can be reliably run in other computational environments.
-
-To increase the likelihood that we can run your code, please [install](https://docs.docker.com/get-docker/) Docker, build a Docker image from your code, and run it on the training data. To quickly check your code for bugs, you may want to run it on a small subset of the training data, such as 1000 records.
-
-If you have trouble running your code, then please try the follow steps to run the example code.
-
-1. Create a folder `example` in your home directory with several subfolders.
-
-        user@computer:~$ cd ~/
-        user@computer:~$ mkdir example
-        user@computer:~$ cd example
-        user@computer:~/example$ mkdir training_data holdout_data model holdout_outputs
-
-2. Download the training data from the [Challenge website](https://physionetchallenges.org/2026/#data). Put some of the training data in `training_data` and `holdout_data`. You can use some of the training data to check your code (and you should perform cross-validation on the training data to evaluate your algorithm).
-
-3. Download or clone this repository in your terminal.
-
-        user@computer:~/example$ git clone https://github.com/physionetchallenges/python-example-2026.git
-
-4. Build a Docker image and run the example code in your terminal.
-
-        user@computer:~/example$ ls
-        holdout_data  holdout_outputs  model  python-example-2026  training_data
-
-        user@computer:~/example$ cd python-example-2026/
-
-        user@computer:~/example/python-example-2026$ docker build -t image .
-
-        Sending build context to Docker daemon  [...]kB
-        [...]
-        Successfully tagged image:latest
-
-        user@computer:~/example/python-example-2026$ docker run -it -v ~/example/model:/challenge/model -v ~/example/holdout_data:/challenge/holdout_data -v ~/example/holdout_outputs:/challenge/holdout_outputs -v ~/example/training_data:/challenge/training_data image bash
-
-        root@[...]:/challenge# ls
-            Dockerfile             holdout_outputs        run_model.py
-            evaluate_model.py      LICENSE                training_data
-            helper_code.py         README.md      
-            holdout_data           requirements.txt
-
-        root@[...]:/challenge# python train_model.py -d training_data -m model -v
-
-        root@[...]:/challenge# python run_model.py -d holdout_data -m model -o holdout_outputs -v
-
-        root@[...]:/challenge# python evaluate_model.py -d holdout_data -o holdout_outputs
-        [...]
-
-        root@[...]:/challenge# exit
-        Exit
-
-## What else do I need?
-
-Please see the [evaluation code repository](https://github.com/physionetchallenges/evaluation-2026) for code and instructions for evaluating your entry using the Challenge scoring metric.
-
-## How do I learn more? How do I share more?
-
-Please see the [Challenge website](https://physionetchallenges.org/2026/) for more details. Please post questions and concerns on the [Challenge discussion forum](https://groups.google.com/forum/#!forum/physionet-challenges). Please do not make pull requests, which may share information about your approach.
-
-## Useful links
-
-* [Challenge website](https://physionetchallenges.org/2026/)
-* [MATLAB example code](https://github.com/physionetchallenges/matlab-example-2026)
-* [Evaluation code](https://github.com/physionetchallenges/evaluation-2026)
-* [Frequently asked questions (FAQ) for this year's Challenge](https://physionetchallenges.org/2026/faq/)
-* [Frequently asked questions (FAQ) about the Challenges in general](https://physionetchallenges.org/faq/)
+The submission format is based on the official `physionetchallenges/python-example-2026` repository at commit `c0bcd78ddb892290b9d218be9be19660f4d8bdf3`.

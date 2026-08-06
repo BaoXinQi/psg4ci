@@ -1,0 +1,19 @@
+{
+  "demographics": false,
+  "files": {
+    "e1_encoder.pt": {
+      "bytes": 2790341,
+      "sha256": "e9f135c973c0540970f34acbde89096c028eb3a95a0a601d85f21e8f83d36ac0"
+    },
+    "raw_sequence_final.pt": {
+      "bytes": 11107428,
+      "sha256": "49f23528742ec9c98dcf72d16c90aebca8fadc253d12d718a8e69983bd582177"
+    }
+  },
+  "model": "frozen E1 + Raw-only hierarchical full-night Transformer",
+  "seed": 20260806,
+  "sequence_epochs": 4,
+  "status": "complete",
+  "training_positives": 498,
+  "training_records": 6600
+}

@@ -104,7 +104,7 @@ def compute_auroc_age(labels, predictions, ages, gap=0):
     idx_neg = [i for i in range(m) if labels[i] == 0]
     num_pos = len(idx_pos)
     num_neg = len(idx_neg)
-    
+
     numer = 0
     denom = 0
     for i in range(num_pos):
@@ -144,7 +144,7 @@ def compute_auroc_weighted(labels, predictions, ages, gap=0):
                         numer[k] += 1
                     elif predictions[idx_pos[i]] == predictions[idx_neg[j]]:
                         numer[k] += 0.5
-                    denom[k] += 1              
+                    denom[k] += 1
 
     weights = np.zeros(q)
     for k in range(q):
@@ -258,8 +258,8 @@ def evaluate_model(labels_files, predictions_files, prevalence_files):
 
     num_prevalence_patients = len(prevalence_patients)
     prevalence_labels = np.zeros(num_prevalence_patients)
-    prevalence_ages = np.zeros(num_prevalence_patients)  
-    
+    prevalence_ages = np.zeros(num_prevalence_patients)
+
     for i, patient in enumerate(prevalence_patients):
         label = df_prevalence.loc[patient, id_label]
         prevalence_labels[i] = label
@@ -276,9 +276,9 @@ def evaluate_model(labels_files, predictions_files, prevalence_files):
     auprc = compute_auprc(labels, probability_predictions)
     accuracy = compute_accuracy(labels, binary_predictions)
     f_measure = compute_f_measure(labels, binary_predictions)
-    
+
     table = list()
-    
+
     header = ['Age', 'Prevalence (prevalence data)', '# positive labels (prevalence data)', '# negative labels (prevalence data)', \
               '# positive labels', '# negative labels', '# positive predictions', '# negative predictions', \
               '# true positives', '# false positives', '# false negatives', '# true negatives']
@@ -293,7 +293,7 @@ def evaluate_model(labels_files, predictions_files, prevalence_files):
         pb = sum(1 for i in range(n) if ages[i] == age and labels[i] == 1)
         nb = sum(1 for i in range(n) if ages[i] == age and labels[i] == 0)
         pc = sum(1 for i in range(n) if ages[i] == age and binary_predictions[i] == 1)
-        nc = sum(1 for i in range(n) if ages[i] == age and binary_predictions[i] == 0)                  
+        nc = sum(1 for i in range(n) if ages[i] == age and binary_predictions[i] == 0)
         tp = sum(1 for i in range(n) if ages[i] == age and labels[i] == 1 and binary_predictions[i] == 1)
         fp = sum(1 for i in range(n) if ages[i] == age and labels[i] == 0 and binary_predictions[i] == 1)
         fn = sum(1 for i in range(n) if ages[i] == age and labels[i] == 1 and binary_predictions[i] == 0)

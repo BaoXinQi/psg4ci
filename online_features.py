@@ -97,6 +97,23 @@ def _direct_preferred(
     return SourceSpec((selected,), (labels[selected],), "direct")
 
 
+def _direct_matching(
+    mapped: dict[str, list[int]],
+    canonical: str,
+    labels: list[str],
+    mapper: ChannelMapper,
+    accepted_names: set[str],
+) -> SourceSpec | None:
+    index = _first(
+        candidate
+        for candidate in mapped.get(canonical, [])
+        if mapper.normalize_channel_name(labels[candidate]) in accepted_names
+    )
+    if index is None:
+        return None
+    return SourceSpec((index,), (labels[index],), "direct")
+
+
 def _component(
     mapped: dict[str, list[int]],
     positive: str,
@@ -221,20 +238,20 @@ def build_source_specs(labels: list[str]) -> dict[str, SourceSpec | None]:
         {"roc", "eog2", "eog r", "eog-r", "reog"},
         {"m1", "a1", "eeg m1"},
     ) or _component(mapped, "E2", "M1", labels, mapper)
-    specs["EOG_E1"] = _direct_filtered(
+    specs["EOG_E1"] = left_component or _direct(mapped, "E1", labels) or _direct_filtered(
         mapped,
         "LOC",
         labels,
         mapper,
         {"loc", "eog1", "eog l", "eog-l", "leog"},
-    ) or left_component
-    specs["EOG_E2"] = _direct_filtered(
+    )
+    specs["EOG_E2"] = right_component or _direct(mapped, "E2", labels) or _direct_filtered(
         mapped,
         "ROC",
         labels,
         mapper,
         {"roc", "eog2", "eog r", "eog-r", "reog"},
-    ) or right_component
+    )
 
     specs["CHIN_EMG"] = _paired_components(
         mapped,
@@ -242,8 +259,8 @@ def build_source_specs(labels: list[str]) -> dict[str, SourceSpec | None]:
         "CHIN2",
         labels,
         mapper,
-        {"chin 1", "chin1", "chin l", "chin-l", "emg1", "l chin"},
-        {"chin 2", "chin2", "chin r", "chin-r", "emg2", "r chin"},
+        {"chin 1", "chin1", "chin l", "chin-l", "chinl", "china", "emg1", "l chin"},
+        {"chin 2", "chin2", "chin r", "chin-r", "chinr", "chinb", "emg2", "r chin"},
     ) or _direct(mapped, "CHIN", labels)
     specs["LEG_EMG_LEFT"] = _direct(mapped, "LAT", labels) or _paired_components(
         mapped,
@@ -294,13 +311,51 @@ def build_source_specs(labels: list[str]) -> dict[str, SourceSpec | None]:
         "NASAL_PRESSURE",
         labels,
         mapper,
-        ["nasal pressure", "nasal", "cannula", "ptaf", "nptaf", "nasaloral", "nasal oral"],
-    ) or _direct_preferred(
+        [
+            "ptaf",
+            "npt",
+            "nasal pressure",
+            "pressure",
+            "nasal",
+            "cannula",
+            "nptaf",
+        ],
+    )
+    specs["THERMAL_AIRFLOW"] = _direct_matching(
         mapped,
         "AIRFLOW",
         labels,
         mapper,
-        ["thermistor", "thermal", "airflow", "therm"],
+        {
+            "thermistor",
+            "therm",
+            "thermistor 2",
+            "thermal airflow",
+            "thermal",
+            "oral thermistor",
+            "oral therm",
+        },
+    )
+    specs["AIRFLOW_UNSPECIFIED"] = _direct_matching(
+        mapped,
+        "AIRFLOW",
+        labels,
+        mapper,
+        {"airflow", "air flow", "flow"},
+    )
+    specs["PAP_FLOW"] = _direct_preferred(
+        mapped,
+        "CFLOW",
+        labels,
+        mapper,
+        ["cflow", "c-flow", "c flow", "cpap flow"],
+    )
+    specs["PAP_PRESSURE"] = _direct_preferred(
+        mapped,
+        "CPAP_PRESSURE",
+        labels,
+        mapper,
+        ["cpres", "cpap pressure", "c press", "cpap press", "cpress"],
     )
     specs["THORACIC_EFFORT"] = _direct(mapped, "CHEST", labels)
     specs["ABDOMINAL_EFFORT"] = _direct(mapped, "ABDOMINAL", labels)
@@ -401,18 +456,44 @@ def build_psg_cache(psg_path: Path, output_path: Path, record_id: str, site_id: 
                 modality_rates[channel_index] = native_rate
 
                 if modality == "spo2":
-                    (
-                        spo2_epochs,
-                        hard_5s,
-                        extreme_5s,
-                        second_valid,
-                        _,
-                        _,
-                    ) = pp.process_spo2(canonical_raw, native_rate, n_epochs)
-                    modality_signals[:, channel_index, :] = spo2_epochs
-                    hard[:, channel_index] = hard_5s
+                    source_hard_5s = pp.calculate_hard_valid_5s(
+                        pp.raw_signal_to_5s_windows(canonical_raw, native_rate, n_epochs)
+                    )
+                    rounded_rate = int(round(native_rate))
+                    if not np.isclose(native_rate, rounded_rate, atol=1e-6):
+                        raise ValueError(
+                            f"SpO2 sampling rate is not integer-like: {native_rate}"
+                        )
+                    n_seconds = n_epochs * EPOCH_SEC
+                    matrix = pp.pad_or_trim(
+                        canonical_raw, n_seconds * rounded_rate
+                    ).reshape(n_seconds, rounded_rate)
+                    with np.errstate(all="ignore"):
+                        per_second = np.nanmedian(
+                            np.where(np.isfinite(matrix), matrix, np.nan), axis=1
+                        )
+                    positive = per_second[np.isfinite(per_second) & (per_second > 0)]
+                    scale_indicator = float(np.median(positive)) if positive.size else np.nan
+                    if np.isfinite(scale_indicator) and scale_indicator <= 1.5:
+                        per_second = per_second * 100.0
+                    second_valid = (
+                        np.isfinite(per_second)
+                        & (per_second >= 50.0)
+                        & (per_second <= 100.5)
+                    )
+                    per_second = pp.interpolate_nonfinite(per_second)
+                    spo2_epochs = per_second.reshape(n_epochs, EPOCH_SEC).astype(np.float32)
+                    extreme_5s = np.zeros_like(source_hard_5s, dtype=bool)
+                    normalized, center, scale, clipped = pp.robust_center_scale_from_5s(
+                        spo2_epochs, source_hard_5s, target_rate
+                    )
+                    modality_signals[:, channel_index, :] = normalized
+                    hard[:, channel_index] = source_hard_5s
                     extreme[:, channel_index] = extreme_5s
                     spo2_second_valid = second_valid
+                    modality_centers[channel_index] = center
+                    modality_scales[channel_index] = scale
+                    modality_clipped[channel_index] = clipped
                     continue
 
                 hard_5s = pp.calculate_hard_valid_5s(

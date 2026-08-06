@@ -47,7 +47,7 @@ HEADERS = {
 def load_rename_rules(csv_path: str) -> Dict[str, List[str]]:
     """
     Loads channel aliases from a CSV file and prepares the renaming rules.
-    The CSV should have a 'Channel_Names' column containing string representations 
+    The CSV should have a 'Channel_Names' column containing string representations
     of tuples or lists of aliases (e.g., "('C3-M2', 'C3-A2')").
 
     Returns:
@@ -59,35 +59,35 @@ def load_rename_rules(csv_path: str) -> Dict[str, List[str]]:
     except FileNotFoundError:
         print(f"Error: Channel table file not found at {csv_path}")
         return rename_rules
-    
+
     if 'Channel_Names' not in channel_table.columns:
         print("Error: CSV file must contain a 'Channel_Names' column.")
         return rename_rules
 
     for _, row in channel_table.iterrows():
         alias_str_raw = row['Channel_Names']
-        
+
         if pd.isna(alias_str_raw):
             continue
 
         try:
             # Parse the string representation into a list or tuple
-            alias_list = [a.strip().replace("'", "").replace('"', "") 
+            alias_list = [a.strip().replace("'", "").replace('"', "")
                 for a in str(alias_str_raw).split(';')]
-            
+
             # Remove empty strings
             alias_list = [a for a in alias_list if a]
-            
+
             if alias_list:
                 # Use the first alias as the standardized name
-                key = alias_list[0].lower() 
+                key = alias_list[0].lower()
                 # Store all aliases in lower case for matching
                 rename_rules[key] = [str(a) for a in alias_list]
 
         except (ValueError, SyntaxError, TypeError) as e:
             # print(f"Skipping row due to parsing error: {e} in raw string: {alias_str_raw}")
             continue
-            
+
     return rename_rules
 
 
@@ -98,23 +98,23 @@ def _get_cleaned_name(channel_name: str) -> str:
     """
     # convert to lower case
     cleaned = channel_name.lower()
-    
+
     # remove common suffixes
     cleaned = cleaned.replace('_pds', '').replace('_eg', '')
-    
+
     # remove common separators
     cleaned = cleaned.replace(':', '-')
-    
+
     # remove leading/trailing whitespace
     cleaned = cleaned.strip()
-    
+
     return cleaned
 
 # --- Main mapping function ---
 
 def map_valid_channels_rename_only(columns_original: List[str], rename_rules: Dict[str, List[str]]) -> Dict[str, str]:
     """
-    Finds the first match for each standard name from the rename_rules in the 
+    Finds the first match for each standard name from the rename_rules in the
     list of original channel names.
 
     Args:
@@ -125,37 +125,37 @@ def map_valid_channels_rename_only(columns_original: List[str], rename_rules: Di
         Dict[str, str]: {Standard Name: Matched Original Channel Name}
     """
     channel_map = {}
-    
+
     # Step 1: Create a map from cleaned column names to original names
     # {cleaned_name: original_name}
     cleaned_to_original_map = {_get_cleaned_name(col): col for col in columns_original}
-    
+
     # Step 2: Iterate through standard names and aliases to find a match
     for std_name, aliases in rename_rules.items():
         for alias in aliases:
             # Clean the alias for comparison
             alias_cleaned = _get_cleaned_name(alias)
-            
+
             if alias_cleaned in cleaned_to_original_map:
                 # Found a match! Get the original, uncleaned name
                 orig_col = cleaned_to_original_map[alias_cleaned]
-                
+
                 # Use the standard name as the key, and the original name as the value
-                channel_map[std_name] = orig_col 
-                
+                channel_map[std_name] = orig_col
+
                 # Stop searching for this standard name once the best match is found
-                break  
-    
+                break
+
     return channel_map
 
 # --- Main standardization function ---
 
 def standardize_channel_names_rename_only(
-    columns_original: List[str], 
+    columns_original: List[str],
     rename_rules: Dict[str, List[str]]
 ) -> Tuple[Dict[str, str], List[str]]:
-    """ 
-    Standardizes channel names based on rules, identifies duplicates to drop, 
+    """
+    Standardizes channel names based on rules, identifies duplicates to drop,
     and handles pulse/pr renaming.
 
     Args:
@@ -163,15 +163,15 @@ def standardize_channel_names_rename_only(
         rename_rules: Dictionary mapping {Standard Name: [Alias1, Alias2, ...]}
 
     Returns:
-        Tuple[Dict[str, str], List[str]]: 
+        Tuple[Dict[str, str], List[str]]:
             - rename_map: {Original Raw Name: New Standard Name}
             - cols_to_drop: List of original raw names to be dropped.
     """
-    
+
     # Step 1: Find the desired standard name for each matching raw channel
     # Output: {Standard Name: Matched Original Raw Name}
     channel_map = map_valid_channels_rename_only(columns_original, rename_rules)
-    
+
     # Step 2: Reverse map (Raw Name -> Standard Name) for the final rename operation
     # Output: {Original Raw Name: Standard Name}
     rename_map = {orig_raw: std_name for std_name, orig_raw in channel_map.items()}
@@ -181,7 +181,7 @@ def standardize_channel_names_rename_only(
 
     # Map cleaned names to their original names for quick lookup
     cleaned_to_original_map = {_get_cleaned_name(col): col for col in columns_original}
-    
+
     for std_name, matched_raw in channel_map.items():
         # Get all cleaned aliases corresponding to this standard name
         aliases_cleaned = {_get_cleaned_name(a) for a in rename_rules.get(std_name, [])}
@@ -189,25 +189,25 @@ def standardize_channel_names_rename_only(
         # Check all existing columns in the file
         for raw_col in columns_original:
             cleaned_col = _get_cleaned_name(raw_col)
-            
+
             # If a column's cleaned name is one of the standard name's aliases
             if cleaned_col in aliases_cleaned:
-                
+
                 # AND this column is NOT the one chosen to be kept
                 # (We keep 'matched_raw' and drop others that map to the same 'std_name')
                 if raw_col != matched_raw:
                     cols_to_drop.append(raw_col)
-    
+
     # Remove duplicates from the drop list
     cols_to_drop = sorted(set(cols_to_drop))
 
     # Step 4: Handle pulse/pr → hr rename (if not already handled by rename_rules)
     pulse_map = {"pulse": "hr", "pr": "hr"}
-    
+
     # Iterate through the original channels to find 'pulse' or 'pr'
     for orig_ch_raw in columns_original:
         orig_ch_cleaned = _get_cleaned_name(orig_ch_raw)
-        
+
         for orig_ch_alias, new_ch_standard in pulse_map.items():
             if orig_ch_cleaned == orig_ch_alias:
                 # Check if this raw channel has NOT been mapped to a standard name yet (to avoid overwriting EEG channel names)
@@ -216,23 +216,23 @@ def standardize_channel_names_rename_only(
                     if new_ch_standard not in rename_map.values():
                         # Add this rename directly to the final map
                         rename_map[orig_ch_raw] = new_ch_standard
-    
+
     return rename_map, cols_to_drop
 
 
 def derive_bipolar_signal(
-    ch_a_signal: np.ndarray, 
-    ref_signal: Union[np.ndarray, Tuple[np.ndarray, np.ndarray]], 
+    ch_a_signal: np.ndarray,
+    ref_signal: Union[np.ndarray, Tuple[np.ndarray, np.ndarray]],
 ) -> Optional[np.ndarray]:
     """
-    Derives a new bipolar EEG channel by subtracting a reference signal 
+    Derives a new bipolar EEG channel by subtracting a reference signal
     from a primary signal (A - Reference).
 
     Args:
         ch_a_signal: The primary signal (e.g., C4). Must be in physical units.
-        ref_signal: The reference signal(s). Can be a single Series (M1) 
+        ref_signal: The reference signal(s). Can be a single Series (M1)
                     or a tuple of two Series (M1, M2) for average referencing.
-        scaling_factor: Factor applied to the reference. Use 0.5 for average 
+        scaling_factor: Factor applied to the reference. Use 0.5 for average
                         mastoid reference (A - 0.5 * (B + C)).
 
     Returns:
@@ -261,7 +261,7 @@ def load_edf_to_nparrays(edf_path: str) -> Tuple[Dict[str, np.ndarray], Dict[str
         edf_path: Path to the EDF file.
 
     Returns:
-        Tuple[Dict, Dict]: 
+        Tuple[Dict, Dict]:
             - channel_dict: {channel_label: physical_signal_array}
             - fs_dict: {channel_label: sampling_frequency}
     """
@@ -279,7 +279,7 @@ def load_edf_to_nparrays(edf_path: str) -> Tuple[Dict[str, np.ndarray], Dict[str
     for sig in signals:
         # Extract channel label
         label = sig.label.lower().strip()
-        
+
         # Extract Sampling Frequency (fs)
         fs_dict[label] = float(sig.sampling_frequency)
 
@@ -291,14 +291,14 @@ def load_edf_to_nparrays(edf_path: str) -> Tuple[Dict[str, np.ndarray], Dict[str
 # Extracts a list of unique patient identifiers (BIDS folder names) from the metadata CSV
 def find_patients(patient_data_file):
     """
-    Returns a list of dictionaries, each containing the identifiers 
+    Returns a list of dictionaries, each containing the identifiers
     needed to locate specific physiological files.
     """
     df = pd.read_csv(patient_data_file)
     # Get the unique combinations of patient, site, and session
     cols = [HEADERS['bids_folder'], HEADERS['site_id'], HEADERS['session_id']]
     patient_info = df[cols].drop_duplicates()
-    
+
     return patient_info.to_dict('records')
 
 # Loads the raw physiological signal data
@@ -335,18 +335,18 @@ def update_demographics_table(input_file, output_folder, results_dict):
 
     # Load the original demographics file
     df = pd.read_csv(input_file)
-    
+
     # Create new columns if they do not exist
     if id_bin not in df.columns: df[id_bin] = None
     if id_prob not in df.columns: df[id_prob] = float('nan')
-    
+
     # Fill in the predictions
     for record_id, (label, prob) in results_dict.items():
         # Match by 'BidsFolder'
         mask = df[id_folder] == record_id
         df.loc[mask, id_bin] = label
         df.loc[mask, id_prob] = prob
-    
+
     # Save to file
     output_file = os.path.join(output_folder, os.path.basename(input_file))
     df.to_csv(output_file, index=False)
@@ -367,7 +367,7 @@ def load_demographics(metadata_file, patient_id, session_id):
     # Ensure patient_id matches the 'BidsFolder' column
     mask = (df[HEADERS['bids_folder']] == patient_id) & (df[HEADERS['session_id']] == session_id)
     patient_data = df.loc[mask]
-    
+
     if not patient_data.empty:
         return patient_data.iloc[0].to_dict()
     return {}
@@ -391,10 +391,10 @@ def load_age(data):
 def load_sex(data, standardize=True):
     """Extracts and standardizes the sex label."""
     sex = str(data.get(HEADERS['sex'], '')).strip()
-    
+
     if not standardize:
         return sex
-        
+
     sex_cf = sex.casefold()
     if sex_cf.startswith('f'):
         return 'Female'
@@ -425,34 +425,34 @@ def load_label(data):
 def load_race(data, standardize=True):
     """Extracts and standardizes the race label."""
     race_raw = str(data.get(HEADERS['race'], '')).strip()
-    
+
     if not standardize:
         return race_raw
-        
+
     race_cf = race_raw.casefold()
-    
+
     if any(word in race_cf for word in ['white', 'caucasian']):
         return 'White'
     if any(word in race_cf for word in ['black', 'african american']):
         return 'Black'
     if 'asian' in race_cf:
         return 'Asian'
-    
+
     unavailable_keywords = ['unknown', 'unavailable', 'declined', 'unreported', 'nan',
                             'none', 'not specified', 'prefer not to say', '']
-                            
+
     if any(word == race_cf or word in race_cf for word in unavailable_keywords):
         return 'Unavailable'
-        
+
     return 'Others'
 
 def load_ethnicity(data, standardize=True):
     """Extracts and standardizes the ethnicity label."""
     ethnic_raw = str(data.get(HEADERS['ethnicity'], '')).strip()
-    
+
     if not standardize:
         return ethnic_raw
-        
+
     ethnic_cf = ethnic_raw.casefold()
 
     not_hispanic_keywords = [
@@ -460,16 +460,16 @@ def load_ethnicity(data, standardize=True):
     ]
     if any(word in ethnic_cf for word in not_hispanic_keywords):
         return 'Not Hispanic'
-    
+
     if 'hispanic' in ethnic_cf or 'latino' in ethnic_cf:
         return 'Hispanic'
-    
-    unavailable_keywords = ['unknown', 'unavailable', 'declined', 'unreported', 'nan', 
+
+    unavailable_keywords = ['unknown', 'unavailable', 'declined', 'unreported', 'nan',
                             'none', 'not specified', 'prefer not to say', '']
-                            
+
     if any(word == ethnic_cf or word in ethnic_cf for word in unavailable_keywords):
         return 'Unavailable'
-        
+
     return 'Unavailable'
 
 # Retrieves the cognitive status/diagnosis label
@@ -479,15 +479,15 @@ def load_diagnoses(metadata_file, patient_id):
     """
     df = pd.read_csv(metadata_file)
     mask = df[HEADERS['bids_folder']] == patient_id
-    
+
     if mask.sum() == 0:
         raise ValueError(f"Patient ID {patient_id} not found in {metadata_file}.")
-        
+
     val = df.loc[mask, HEADERS['label']].values[0]
-    
+
     if pd.isna(val):
         raise ValueError(f"Cognitive Impairment diagnosis is missing for patient {patient_id}.")
-        
+
     if isinstance(val, str):
         return 1 if str(val).casefold() == 'true' else 0
     return 1 if val else 0
@@ -499,7 +499,7 @@ def load_Time_to_Event(data):
         return float(tte_val) if tte_val is not None else float('nan')
     except (ValueError, TypeError):
         return float('nan')
-    
+
 def load_Last_Known_Visit_Date(data):
     """Extracts Last_Known_Visit_Date."""
     return data.get(HEADERS['last_known_visit_date'], 'Unknown')
@@ -520,7 +520,7 @@ def load_edf(record: str):
     """
     if not record.endswith('.edf'):
         record += '.edf'
-        
+
     try:
         # Using lazy_load_data=False to fully load signals into memory.
         # Use lazy_load_data=True if you only need the header/metadata.
@@ -577,7 +577,7 @@ def load_signals_as_array(edf_object: edfio.Edf) -> Optional[np.ndarray]:
     except Exception as e:
         print(f"Error converting signals to array: {e}")
         return None
-    
+
 ### Other helper functions
 
 # Remove any single or double quotes; parentheses, braces, and brackets (for singleton arrays); and spaces and tabs from a string.

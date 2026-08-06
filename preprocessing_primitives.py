@@ -45,7 +45,15 @@ CANONICAL_BY_MODALITY = {
     "eog": ["EOG_E1", "EOG_E2"],
     "emg": ["CHIN_EMG", "LEG_EMG_LEFT", "LEG_EMG_RIGHT"],
     "ecg": ["ECG"],
-    "resp": ["NASAL_PRESSURE", "THORACIC_EFFORT", "ABDOMINAL_EFFORT"],
+    "resp": [
+        "NASAL_PRESSURE",
+        "THERMAL_AIRFLOW",
+        "AIRFLOW_UNSPECIFIED",
+        "PAP_FLOW",
+        "PAP_PRESSURE",
+        "THORACIC_EFFORT",
+        "ABDOMINAL_EFFORT",
+    ],
     "spo2": ["SPO2"],
 }
 

@@ -1,5 +1,0 @@
-group_name,raw_feature_count,selected_feature_count,post_variance_feature_count,pca_components,explained_variance_ratio_sum
-eeg_eog,1056,1056,2056,16,0.8058065176010132
-resp_spo2,423,423,821,16,0.8018187880516052
-ecg,142,142,276,16,0.9309582710266113
-emg,288,288,558,16,0.8226021528244019

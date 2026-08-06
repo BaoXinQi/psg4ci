@@ -63,7 +63,7 @@ def run(args):
         patient_id = record[HEADERS['bids_folder']]
         site_id    = record[HEADERS['site_id']]
         session_id = record[HEADERS['session_id']]
-        
+
         if args.verbose:
             width = len(str(num_records))
             print(f'- {i+1:>{width}}/{num_records}: {patient_id} (Session {session_id})...')
@@ -87,7 +87,7 @@ def run(args):
     # Update the demographics table with the model outputs.
     if args.verbose:
         print('Updating demographics table with model outputs...')
-    
+
     patient_data_file = os.path.join(args.data_folder, DEMOGRAPHICS_FILE)
     output_table_path = update_demographics_table(patient_data_file, args.output_folder, results)
 

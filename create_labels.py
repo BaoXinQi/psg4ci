@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 
-# Do *not* edit this script. 
+# Do *not* edit this script.
 # This file contains functions for creating labels for the Challenge 2026. You can run it as follows:
 #
 #   python create_labels.py -i demographics.csv -c icd_codes_CI.csv -o demographics_with_CI.csv
 #
 # where 'demographics.csv' is a CSV file containing the subjects' demographic information, 'icd_codes_CI.csv' is a CSV file
-# containing ICD-9 and/or ICD-10 codes related to cognitive impairment diagnoses, amd 'demographics_with_CI.csv' is CSV file 
+# containing ICD-9 and/or ICD-10 codes related to cognitive impairment diagnoses, amd 'demographics_with_CI.csv' is CSV file
 # containing the subjects' demographic information and additional columns, 'Cognitive_Impairment' and 'Time_to_Event', that describe
 # a positive or negative label and, for positive subjects, the number of days from the date of the PSG to the date of the first ICD
 # code for a cognitive impairment diagnosis.
@@ -38,11 +38,11 @@ def get_parser():
 def create_labels(demographics_file, icd_file, output_demographics_file):
     # Read demographics
     demographics = pd.read_csv(demographics_file)
-    
+
     # Convert CreationTime to datetime variable
     demographics['CreationTime'] = pd.to_datetime(demographics['CreationTime'], format = 'mixed')
 
-    # Read ICD codes for CI (cognitive impairment)    
+    # Read ICD codes for CI (cognitive impairment)
     ci = pd.read_csv(icd_file)
 
     # Create column combining SiteID and BDSPPatientID
@@ -82,7 +82,7 @@ def create_labels(demographics_file, icd_file, output_demographics_file):
     )
     demographics.loc[indexes_positive, 'Cognitive_Impairment'] = True
 
-    # Drop unnecessary columns    
+    # Drop unnecessary columns
     demographics = demographics.drop(columns = {'SiteIDBDSPPatientID','ICD_difference', 'ICDDateFirst', 'ICDDateLast', 'ICDCount'})
 
     # Store demographics

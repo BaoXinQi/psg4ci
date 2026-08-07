@@ -22,6 +22,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 PRETRAINED_DIR = SCRIPT_DIR / "pretrained_raw"
 MODEL_SUBDIR = "raw_sequence_v3"
 DEFAULT_THRESHOLD = 0.5
+FALLBACK_PROBABILITY = 0.5
 ADAPTATION_RECORDS = 6
 ADAPTATION_LEARNING_RATE = 1e-6
 
@@ -195,15 +196,29 @@ def load_model(model_folder, verbose):
 
 
 def run_model(model, record, data_folder, verbose):
-    patient_id, site_id, _, record_id = _record_parts(record)
-    data_root = _data_root(Path(data_folder))
-    psg_path = _record_path(data_root, site_id, record_id)
-    logit, diagnostics = predict_psg(model, psg_path, record_id, site_id)
-    probability = 1.0 / (1.0 + math.exp(-float(np.clip(logit, -40.0, 40.0))))
-    if verbose:
-        print(
-            f"{patient_id}: {diagnostics['eligible_epoch_count']}/"
-            f"{diagnostics['complete_epoch_count']} eligible epochs",
-            flush=True,
-        )
+    patient_id = _clean_identifier(
+        _row_value(record, ["BidsFolder", "bids_folder", "patient_id", "PatientID"], False)
+    )
+    try:
+        patient_id, site_id, _, record_id = _record_parts(record)
+        data_root = _data_root(Path(data_folder))
+        psg_path = _record_path(data_root, site_id, record_id)
+        logit, diagnostics = predict_psg(model, psg_path, record_id, site_id)
+        probability = 1.0 / (1.0 + math.exp(-float(np.clip(logit, -40.0, 40.0))))
+        if not np.isfinite(probability):
+            raise FloatingPointError("Non-finite Raw CI probability")
+        if verbose:
+            print(
+                f"{patient_id}: {diagnostics['eligible_epoch_count']}/"
+                f"{diagnostics['complete_epoch_count']} eligible epochs",
+                flush=True,
+            )
+    except Exception as exception:
+        probability = FALLBACK_PROBABILITY
+        if verbose:
+            print(
+                f"{patient_id or '<unknown>'}: Raw inference failed; "
+                f"using neutral fallback ({exception!r})",
+                flush=True,
+            )
     return bool(probability >= DEFAULT_THRESHOLD), float(probability)

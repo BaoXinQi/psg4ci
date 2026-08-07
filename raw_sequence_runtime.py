@@ -130,7 +130,9 @@ def encode_cache(
                 values = np.clip(values, -12.0, 12.0) * mask[:, :, None]
                 batch[modality] = torch.from_numpy(values)
                 batch[f"{modality}_mask"] = torch.from_numpy(mask)
-            embedding = encoder(batch)["embedding"]
+            # CI inference only consumes the fused 192D representation. Avoid
+            # executing the SSL projection and semantic heads used in pretraining.
+            embedding = encoder.encode(batch)[0]
             if not torch.isfinite(embedding).all():
                 raise FloatingPointError("Non-finite online E1 embedding")
             encoded.append(embedding.cpu().numpy().astype(np.float32))

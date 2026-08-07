@@ -20,6 +20,9 @@ import psg_feature_extractor
 from channel_mapper import ChannelMapper
 
 
+MAX_ONLINE_EPOCHS = 2560
+
+
 SCRIPT_DIR = Path(__file__).resolve().parent
 CHANNEL_TABLE = SCRIPT_DIR / "channel_table.csv"
 ANNOTATION_ALIGNMENT_SOURCE = SCRIPT_DIR / "annotation_alignment_source.py"
@@ -367,9 +370,12 @@ def _read_signal(
     reader: pyedflib.EdfReader,
     index: int,
     cache: dict[int, np.ndarray],
+    sample_count: int,
 ) -> np.ndarray:
     if index not in cache:
-        cache[index] = np.asarray(reader.readSignal(index), dtype=float)
+        cache[index] = np.asarray(
+            reader.readSignal(index, 0, sample_count), dtype=float
+        )
     return cache[index]
 
 
@@ -388,7 +394,9 @@ def build_psg_cache(psg_path: Path, output_path: Path, record_id: str, site_id: 
         headers = reader.getSignalHeaders()
         rates = [float(header["sample_frequency"]) for header in headers]
         duration_sec = float(reader.file_duration)
-        n_epochs = int(math.floor(duration_sec / EPOCH_SEC))
+        n_epochs = min(
+            int(math.floor(duration_sec / EPOCH_SEC)), MAX_ONLINE_EPOCHS
+        )
         if n_epochs <= 0:
             raise ValueError(f"PSG is shorter than {EPOCH_SEC} seconds: {psg_path}")
 
@@ -439,7 +447,22 @@ def build_psg_cache(psg_path: Path, output_path: Path, record_id: str, site_id: 
                 if len(set(source_rates)) != 1:
                     continue
                 native_rate = source_rates[0]
-                source_arrays = [_read_signal(reader, index, raw_cache) for index in spec.indices]
+                rounded_rate = int(round(native_rate)) if np.isfinite(native_rate) else 0
+                if (
+                    native_rate <= 0
+                    or rounded_rate <= 0
+                    or not np.isclose(native_rate, rounded_rate, atol=1e-3)
+                ):
+                    # Some acquisition systems expose fractional or invalid EDF rates.
+                    # Skip only that canonical channel instead of failing the record.
+                    continue
+                source_sample_count = int(
+                    round(n_epochs * EPOCH_SEC * native_rate)
+                )
+                source_arrays = [
+                    _read_signal(reader, index, raw_cache, source_sample_count)
+                    for index in spec.indices
+                ]
                 if len(source_arrays) == 1:
                     canonical_raw = source_arrays[0].astype(float, copy=True)
                 elif len(source_arrays) == 2:
@@ -459,11 +482,6 @@ def build_psg_cache(psg_path: Path, output_path: Path, record_id: str, site_id: 
                     source_hard_5s = pp.calculate_hard_valid_5s(
                         pp.raw_signal_to_5s_windows(canonical_raw, native_rate, n_epochs)
                     )
-                    rounded_rate = int(round(native_rate))
-                    if not np.isclose(native_rate, rounded_rate, atol=1e-6):
-                        raise ValueError(
-                            f"SpO2 sampling rate is not integer-like: {native_rate}"
-                        )
                     n_seconds = n_epochs * EPOCH_SEC
                     matrix = pp.pad_or_trim(
                         canonical_raw, n_seconds * rounded_rate

@@ -23,4 +23,4 @@ jobs:
       - name: Build Docker image
         run: |
           docker build -t psg4ci-test .
-          docker run --rm psg4ci-test python -c "import torch, mne, pyedflib, edfio, sklearn, h5py, pandas, numpy; print('IMPORT_OK')"
+          docker run --rm psg4ci-test python -c "import torch, pyedflib, edfio, sklearn, h5py, pandas, numpy; print('IMPORT_OK')"

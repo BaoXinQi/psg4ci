@@ -20,7 +20,7 @@ from raw_sequence_runtime import load_runtime, predict_psg
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 PRETRAINED_DIR = SCRIPT_DIR / "pretrained_raw"
-MODEL_SUBDIR = "raw_sequence_v2"
+MODEL_SUBDIR = "raw_sequence_v3"
 DEFAULT_THRESHOLD = 0.5
 ADAPTATION_RECORDS = 6
 ADAPTATION_LEARNING_RATE = 1e-6
@@ -143,22 +143,26 @@ def train_model(data_folder, model_folder, verbose):
 
     probabilities = 1.0 / (1.0 + np.exp(-np.clip(np.asarray(logits), -40.0, 40.0)))
     gradient = float(np.mean(probabilities - np.asarray(labels, dtype=float)))
-    final_bias = runtime["sequence"].head[-1].bias
-    before = float(final_bias.detach().item())
+    final_biases = [sequence.head[-1].bias for sequence in runtime["sequences"]]
+    before = [float(bias.detach().item()) for bias in final_biases]
     with torch.no_grad():
-        final_bias.sub_(ADAPTATION_LEARNING_RATE * gradient)
-    checkpoint_path = model_root / "raw_sequence_final.pt"
-    checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
-    checkpoint["model_state"] = {
-        name: value.detach().cpu() for name, value in runtime["sequence"].state_dict().items()
-    }
-    checkpoint["official_training_adaptation"] = {
-        "records": len(logits),
-        "learning_rate": ADAPTATION_LEARNING_RATE,
-        "bias_before": before,
-        "bias_after": float(final_bias.detach().item()),
-    }
-    torch.save(checkpoint, checkpoint_path)
+        for bias in final_biases:
+            bias.sub_(ADAPTATION_LEARNING_RATE * gradient)
+    after = [float(bias.detach().item()) for bias in final_biases]
+    for checkpoint_path, sequence, bias_before, bias_after in zip(
+        runtime["sequence_paths"], runtime["sequences"], before, after
+    ):
+        checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
+        checkpoint["model_state"] = {
+            name: value.detach().cpu() for name, value in sequence.state_dict().items()
+        }
+        checkpoint["official_training_adaptation"] = {
+            "records": len(logits),
+            "learning_rate": ADAPTATION_LEARNING_RATE,
+            "bias_before": bias_before,
+            "bias_after": bias_after,
+        }
+        torch.save(checkpoint, checkpoint_path)
     (model_folder / "training_metadata.json").write_text(
         json.dumps(
             {
@@ -166,7 +170,8 @@ def train_model(data_folder, model_folder, verbose):
                 "raw_audit_records": len(logits),
                 "failed_audit_records": len(failures),
                 "encoder_frozen": True,
-                "sequence_frozen_except_final_bias": True,
+                "sequence_ensemble_members": len(runtime["sequences"]),
+                "sequences_frozen_except_final_bias": True,
                 "adaptation_learning_rate": ADAPTATION_LEARNING_RATE,
             },
             indent=2,
@@ -182,7 +187,10 @@ def load_model(model_folder, verbose):
     model_root = Path(model_folder) / MODEL_SUBDIR
     runtime = load_runtime(model_root)
     if verbose:
-        print("Loaded frozen E1 + Raw-only full-night Transformer", flush=True)
+        print(
+            f"Loaded frozen E1 + {len(runtime['sequences'])}-member Raw full-night ensemble",
+            flush=True,
+        )
     return runtime
 
 

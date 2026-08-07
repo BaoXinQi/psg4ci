@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 import math
 import os
 import tempfile
@@ -48,18 +49,29 @@ def load_runtime(model_root: Path, threads: int | None = None) -> dict[str, Any]
     encoder = DomainRobustPsgEncoder().cpu().eval()
     encoder.load_state_dict(encoder_state, strict=True)
 
-    sequence_checkpoint = _torch_load(model_root / "raw_sequence_final.pt")
-    sequence = LocalFullNightTransformer(
-        demographic_dimension=1,
-        use_demographics=False,
-        d_model=256,
-        dropout=0.15,
-    ).cpu().eval()
-    sequence.load_state_dict(sequence_checkpoint["model_state"], strict=True)
+    metadata = json.loads((model_root / "metadata.json").read_text(encoding="utf-8"))
+    sequence_files = metadata.get("sequence_files", ["raw_sequence_final.pt"])
+    if not sequence_files:
+        raise RuntimeError("No sequence ensemble members were configured")
+    sequences: list[LocalFullNightTransformer] = []
+    sequence_paths: list[Path] = []
+    for filename in sequence_files:
+        sequence_path = model_root / str(filename)
+        sequence_checkpoint = _torch_load(sequence_path)
+        sequence = LocalFullNightTransformer(
+            demographic_dimension=1,
+            use_demographics=False,
+            d_model=256,
+            dropout=0.15,
+        ).cpu().eval()
+        sequence.load_state_dict(sequence_checkpoint["model_state"], strict=True)
+        sequences.append(sequence)
+        sequence_paths.append(sequence_path)
     return {
         "model_root": model_root,
         "encoder": encoder,
-        "sequence": sequence,
+        "sequences": sequences,
+        "sequence_paths": sequence_paths,
         "encoder_batch_size": 64,
     }
 
@@ -169,11 +181,14 @@ def predict_psg(
         indices, embeddings, epoch_count = encode_cache(
             cache_path, runtime["encoder"], int(runtime["encoder_batch_size"])
         )
-    logit = sequence_logit(
-        runtime["sequence"], indices, embeddings, epoch_count
-    )
+    member_logits = [
+        sequence_logit(sequence, indices, embeddings, epoch_count)
+        for sequence in runtime["sequences"]
+    ]
+    logit = float(np.mean(member_logits))
     return logit, {
         "record_id": record_id,
         "complete_epoch_count": int(epoch_count),
         "eligible_epoch_count": int(len(indices)),
+        "ensemble_members": int(len(member_logits)),
     }

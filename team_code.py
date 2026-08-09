@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PhysioNet Challenge 2026 frozen-E1 Raw-only full-night entry."""
+"""PhysioNet Challenge 2026 domain-robust Raw full-night entry."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ from raw_sequence_runtime import load_runtime, predict_psg
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 PRETRAINED_DIR = SCRIPT_DIR / "pretrained_raw"
-MODEL_SUBDIR = "raw_sequence_v3"
+MODEL_SUBDIR = "raw_sequence_v4"
 DEFAULT_THRESHOLD = 0.5
 FALLBACK_PROBABILITY = 0.5
 ADAPTATION_RECORDS = 6

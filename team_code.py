@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PhysioNet Challenge 2026 domain-robust Raw model with follow-up risk."""
+"""PhysioNet Challenge 2026 domain-robust Raw model with 5-year eligibility-gap risk."""
 
 from __future__ import annotations
 
@@ -20,13 +20,13 @@ from raw_sequence_runtime import load_runtime, predict_psg
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 PRETRAINED_DIR = SCRIPT_DIR / "pretrained_raw"
-MODEL_SUBDIR = "raw_sequence_v9_domain_horizon2192"
+MODEL_SUBDIR = "raw_sequence_v11_domain_eligibility_gap5y"
 DEFAULT_THRESHOLD = 0.5
 ADAPTATION_RECORDS = 6
 ADAPTATION_LEARNING_RATE = 1e-6
 DATE_RULE_FILENAME = "date_residual.json"
 AGE_GAP = 2.0
-FOLLOW_UP_HORIZON_DAYS = 2192.0
+FOLLOW_UP_HORIZON_DAYS = 5.0 * 365.25
 DAYS_PER_YEAR = 365.25
 _DATE_LOOKUP_CACHE: dict[str, dict[tuple[str, str, str], float]] = {}
 
@@ -147,11 +147,11 @@ def _fit_date_rule(frame: pd.DataFrame) -> dict[str, Any]:
         raise ValueError(f"Too few legal date pairs: {pair_counts}")
     coefficient = _fit_positive_site_macro_coefficient(groups)
     return {
-        "version": "creation_time_site_relative_2192d_horizon_v1",
+        "version": "creation_time_site_relative_5y_eligibility_gap_v1",
         "source": "official_training_labels",
         "age_gap_years": AGE_GAP,
         "follow_up_horizon_days": FOLLOW_UP_HORIZON_DAYS,
-        "follow_up_feature": "max(2192 - (site_latest_day - creation_day), 0) / 365.25",
+        "follow_up_feature": "max(5*365.25 - (site_latest_day - creation_day), 0) / 365.25",
         "follow_up_coefficient": coefficient,
         "training_pair_counts": pair_counts,
     }

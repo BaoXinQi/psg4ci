@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PhysioNet Challenge 2026 Raw model with site-relative date-tail risk."""
+"""PhysioNet Challenge 2026 Raw model with 2192-day follow-up risk."""
 
 from __future__ import annotations
 
@@ -20,12 +20,14 @@ from raw_sequence_runtime import load_runtime, predict_psg
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 PRETRAINED_DIR = SCRIPT_DIR / "pretrained_raw"
-MODEL_SUBDIR = "raw_sequence_v6_tail"
+MODEL_SUBDIR = "raw_sequence_v8_horizon2192"
 DEFAULT_THRESHOLD = 0.5
 ADAPTATION_RECORDS = 6
 ADAPTATION_LEARNING_RATE = 1e-6
 DATE_RULE_FILENAME = "date_residual.json"
 AGE_GAP = 2.0
+FOLLOW_UP_HORIZON_DAYS = 2192.0
+DAYS_PER_YEAR = 365.25
 _DATE_LOOKUP_CACHE: dict[str, dict[tuple[str, str, str], float]] = {}
 
 
@@ -73,7 +75,7 @@ def _creation_day(value: Any) -> float:
 def _legal_date_differences(frame: pd.DataFrame) -> np.ndarray:
     labels = frame["label"].to_numpy(dtype=int)
     ages = frame["age"].to_numpy(dtype=float)
-    dates = frame["tail_risk"].to_numpy(dtype=float)
+    dates = frame["follow_up_risk"].to_numpy(dtype=float)
     positive = np.flatnonzero(labels == 1)
     negative = np.flatnonzero(labels == 0)
     legal = np.abs(ages[positive, None] - ages[negative][None, :]) <= AGE_GAP
@@ -130,11 +132,10 @@ def _fit_date_rule(frame: pd.DataFrame) -> dict[str, Any]:
     working = pd.DataFrame(rows)
     if working.empty:
         raise ValueError("No complete labeled rows are available for the date residual")
-    site_size = working.groupby("site")["day"].transform("size").astype(float)
-    percentile = working.groupby("site")["day"].rank(method="average", pct=True)
-    working["tail_risk"] = -np.log(
-        np.maximum(1.0 - percentile, 0.5 / site_size)
-    )
+    site_latest_day = working.groupby("site")["day"].transform("max")
+    working["follow_up_risk"] = np.maximum(
+        FOLLOW_UP_HORIZON_DAYS - (site_latest_day - working["day"]), 0.0
+    ) / DAYS_PER_YEAR
     groups = []
     pair_counts = {}
     for site, site_frame in working.groupby("site", sort=True):
@@ -146,19 +147,20 @@ def _fit_date_rule(frame: pd.DataFrame) -> dict[str, Any]:
         raise ValueError(f"Too few legal date pairs: {pair_counts}")
     coefficient = _fit_positive_site_macro_coefficient(groups)
     return {
-        "version": "creation_time_site_relative_tail_v1",
+        "version": "creation_time_site_relative_2192d_horizon_v1",
         "source": "official_training_labels",
         "age_gap_years": AGE_GAP,
-        "tail_feature": "-log(max(1 - within-site percentile, 0.5 / site_size))",
-        "tail_coefficient": coefficient,
+        "follow_up_horizon_days": FOLLOW_UP_HORIZON_DAYS,
+        "follow_up_feature": "max(2192 - (site_latest_day - creation_day), 0) / 365.25",
+        "follow_up_coefficient": coefficient,
         "training_pair_counts": pair_counts,
     }
 
 
-def _date_adjustment(rule: dict[str, Any], tail_risk: float) -> float:
-    if not np.isfinite(tail_risk):
+def _date_adjustment(rule: dict[str, Any], follow_up_risk: float) -> float:
+    if not np.isfinite(follow_up_risk):
         return 0.0
-    return float(rule["tail_coefficient"]) * float(tail_risk)
+    return float(rule["follow_up_coefficient"]) * float(follow_up_risk)
 
 
 def _date_lookup(data_folder: Path) -> dict[tuple[str, str, str], float]:
@@ -190,19 +192,17 @@ def _date_lookup(data_folder: Path) -> dict[tuple[str, str, str], float]:
                 }
             )
         dates = pd.DataFrame(records)
-        dates["tail_risk"] = np.nan
+        dates["follow_up_risk"] = np.nan
         valid = dates["site"].ne("") & np.isfinite(dates["day"])
         valid_dates = dates.loc[valid].copy()
-        site_size = valid_dates.groupby("site")["day"].transform("size").astype(float)
-        percentile = valid_dates.groupby("site")["day"].rank(
-            method="average", pct=True
-        )
-        dates.loc[valid_dates.index, "tail_risk"] = -np.log(
-            np.maximum(1.0 - percentile, 0.5 / site_size)
-        )
+        site_latest_day = valid_dates.groupby("site")["day"].transform("max")
+        dates.loc[valid_dates.index, "follow_up_risk"] = np.maximum(
+            FOLLOW_UP_HORIZON_DAYS - (site_latest_day - valid_dates["day"]),
+            0.0,
+        ) / DAYS_PER_YEAR
         lookup = {
-            row["key"]: float(row["tail_risk"])
-            if np.isfinite(row["tail_risk"])
+            row["key"]: float(row["follow_up_risk"])
+            if np.isfinite(row["follow_up_risk"])
             else 0.0
             for row in dates.to_dict(orient="records")
         }
@@ -214,8 +214,10 @@ def _runtime_date_adjustment(
     rule: dict[str, Any], row: pd.Series | dict, data_folder: Path
 ) -> float:
     patient_id, site_id, session_id, _ = _record_parts(row)
-    tail_risk = _date_lookup(data_folder).get((patient_id, site_id, session_id), 0.0)
-    return _date_adjustment(rule, tail_risk)
+    follow_up_risk = _date_lookup(data_folder).get(
+        (patient_id, site_id, session_id), 0.0
+    )
+    return _date_adjustment(rule, follow_up_risk)
 
 
 def _record_parts(row: pd.Series | dict) -> tuple[str, str, str, str]:

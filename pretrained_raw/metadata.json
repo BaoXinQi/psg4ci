@@ -1,17 +1,17 @@
 {
   "demographics": true,
-  "creation_time_follow_up_risk": {
+  "creation_time_eligibility_gap_risk": {
     "age_gap_years": 2.0,
     "coefficient_constraint": "nonnegative",
     "fit": "site-macro legal-pair logistic",
     "file": "date_residual.json",
-    "inference_transform": "distance from within-site latest CreationTime with fixed 2192-day horizon"
+    "inference_transform": "distance from within-site latest CreationTime with fixed five-year eligibility gap"
   },
   "ensemble": "equal-weight mean of logits",
   "files": {
     "date_residual.json": {
-      "bytes": 398,
-      "sha256": "fa7a0b7d7ab1ea9db7be4d841194ff8c6ef2706eb82ae74878404ff5590494bd"
+      "bytes": 409,
+      "sha256": "7faadd655286ce7e8e615ddd4ad3d4b47f1479a7a1fac4fb13b85389e242bf6c"
     },
     "e1_encoder.pt": {
       "bytes": 2790341,
@@ -36,7 +36,7 @@
       "sha256": "862025875338e1e24b731b6c245e48d1de8cd532bce7179e02835f75183fe000"
     }
   },
-  "model": "frozen E1 + three-member M2 Raw ensemble + site-relative 2192-day follow-up risk",
+  "model": "frozen E1 + three-member M2 Raw ensemble + site-relative five-year eligibility-gap risk",
   "pair_scope": "same_site",
   "pairwise_weight": 0.15,
   "sequence_files": [

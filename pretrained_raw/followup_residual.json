@@ -1,0 +1,20 @@
+{
+  "cutoff_aggregation": "equal_mean_of_site_specific_risks",
+  "cutoff_quantile": 0.99,
+  "days_per_year": 365.25,
+  "follow_up_horizon_days": 2192.0,
+  "record_wise_inference": true,
+  "risk_coefficient": 5.274442325259245,
+  "source": "official_large_6600_training_labels_and_last_visit_dates",
+  "training_pair_counts": {
+    "I0002": 1886,
+    "I0006": 14493,
+    "S0001": 182330
+  },
+  "training_site_cutoffs": {
+    "I0002": 20223.82,
+    "I0006": 19599.0,
+    "S0001": 19991.0
+  },
+  "version": "recordwise_training_cutoff_marginalized_6y_v1"
+}

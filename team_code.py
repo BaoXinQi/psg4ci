@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Domain-Raw full-night model with record-wise date and CAISR residuals."""
+"""Domain-Raw model with record-wise date, CAISR, and follow-up residuals."""
 
 from __future__ import annotations
 
 import json
+import hashlib
 import math
 import shutil
 from pathlib import Path
@@ -21,13 +22,16 @@ from raw_sequence_runtime import load_runtime, predict_psg
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 PRETRAINED_DIR = SCRIPT_DIR / "pretrained_raw"
-MODEL_SUBDIR = "raw_sequence_v13_domain_date_caisr"
+MODEL_SUBDIR = "raw_sequence_v14_recordwise_followup_blend"
 DEFAULT_THRESHOLD = 0.5
 ADAPTATION_RECORDS = 6
 ADAPTATION_LEARNING_RATE = 1e-6
 DATE_RULE_FILENAME = "date_residual.json"
 CAISR_RULE_FILENAME = "caisr_residual.json"
+FOLLOWUP_RULE_FILENAME = "followup_residual.json"
 AGE_GAP = 2.0
+FOLLOW_UP_HORIZON_DAYS = 2192.0
+DAYS_PER_YEAR = 365.25
 _DATE_LOOKUP_CACHE: dict[str, dict[tuple[str, str, str], Any]] = {}
 
 
@@ -156,6 +160,106 @@ def _fit_date_rule(frame: pd.DataFrame) -> dict[str, Any]:
     }
 
 
+def _followup_risk(rule: dict[str, Any], day: float) -> float:
+    if not np.isfinite(day):
+        return 0.0
+    cutoffs = np.asarray(list(rule["training_site_cutoffs"].values()), dtype=float)
+    thresholds = cutoffs - float(rule["follow_up_horizon_days"])
+    risks = np.maximum(day - thresholds, 0.0) / float(rule["days_per_year"])
+    return float(np.mean(risks))
+
+
+def _legal_followup_differences(frame: pd.DataFrame) -> np.ndarray:
+    labels = frame["label"].to_numpy(dtype=int)
+    ages = frame["age"].to_numpy(dtype=float)
+    risks = frame["risk"].to_numpy(dtype=float)
+    positive = np.flatnonzero(labels == 1)
+    negative = np.flatnonzero(labels == 0)
+    legal = np.abs(ages[positive, None] - ages[negative][None, :]) <= AGE_GAP
+    return (risks[positive, None] - risks[negative][None, :])[legal]
+
+
+def _fit_followup_rule(frame: pd.DataFrame) -> dict[str, Any]:
+    cutoff_rows = []
+    labeled_rows = []
+    for row in frame.to_dict(orient="records"):
+        site = _clean_identifier(
+            _row_value(row, ["SiteID", "site_id", "site"], False)
+        )
+        creation = _creation_day(
+            _row_value(row, ["CreationTime", "creation_time"], False)
+        )
+        last_visit = _creation_day(
+            _row_value(
+                row,
+                ["Last_Known_Visit_Date", "last_known_visit_date"],
+                False,
+            )
+        )
+        if site and np.isfinite(last_visit):
+            cutoff_rows.append({"site": site, "last_visit": last_visit})
+
+        label = _parse_binary(
+            _row_value(
+                row,
+                ["Cognitive_Impairment", "cognitive_impairment", "label"],
+                False,
+            )
+        )
+        age_value = pd.to_numeric(
+            _row_value(row, ["Age", "age"], False), errors="coerce"
+        )
+        age = float(age_value) if age_value is not None else float("nan")
+        if label is not None and site and np.isfinite(age) and np.isfinite(creation):
+            labeled_rows.append(
+                {"label": label, "age": age, "site": site, "day": creation}
+            )
+
+    cutoff_frame = pd.DataFrame(cutoff_rows)
+    working = pd.DataFrame(labeled_rows)
+    if cutoff_frame.empty or working.empty:
+        raise ValueError("Follow-up rule requires labeled rows and last-visit dates")
+
+    site_cutoffs = {
+        str(site): float(np.quantile(site_frame["last_visit"], 0.99))
+        for site, site_frame in cutoff_frame.groupby("site", sort=True)
+    }
+    if len(site_cutoffs) < 2:
+        raise ValueError("Follow-up rule requires at least two training sites")
+    provisional_rule = {
+        "training_site_cutoffs": site_cutoffs,
+        "follow_up_horizon_days": FOLLOW_UP_HORIZON_DAYS,
+        "days_per_year": DAYS_PER_YEAR,
+    }
+    working["risk"] = working["day"].map(
+        lambda value: _followup_risk(provisional_rule, float(value))
+    )
+    groups = []
+    pair_counts = {}
+    for site, site_frame in working.groupby("site", sort=True):
+        differences = _legal_followup_differences(
+            site_frame.reset_index(drop=True)
+        )
+        pair_counts[str(site)] = int(differences.size)
+        if differences.size:
+            groups.append(differences)
+    if sum(pair_counts.values()) < 100:
+        raise ValueError(f"Too few legal follow-up pairs: {pair_counts}")
+    coefficient = _fit_positive_site_macro_coefficient(groups)
+    return {
+        "version": "recordwise_training_cutoff_marginalized_6y_v1",
+        "source": "official_training_labels_and_last_visit_dates",
+        "record_wise_inference": True,
+        "cutoff_quantile": 0.99,
+        "cutoff_aggregation": "equal_mean_of_site_specific_risks",
+        "follow_up_horizon_days": FOLLOW_UP_HORIZON_DAYS,
+        "days_per_year": DAYS_PER_YEAR,
+        "training_site_cutoffs": site_cutoffs,
+        "risk_coefficient": coefficient,
+        "training_pair_counts": pair_counts,
+    }
+
+
 def _date_adjustment(rule: dict[str, Any], row: pd.Series | dict) -> float:
     value = _row_value(row, ["CreationTime", "creation_time"], False)
     day = _creation_day(value)
@@ -204,6 +308,23 @@ def _runtime_date_adjustment(
     patient_id, site_id, session_id, _ = _record_parts(row)
     value = _date_lookup(data_folder).get((patient_id, site_id, session_id))
     return _date_adjustment(rule, {"CreationTime": value})
+
+
+def _followup_adjustment(rule: dict[str, Any], row: pd.Series | dict) -> float:
+    value = _row_value(row, ["CreationTime", "creation_time"], False)
+    risk = _followup_risk(rule, _creation_day(value))
+    return float(rule["risk_coefficient"]) * risk
+
+
+def _runtime_followup_adjustment(
+    rule: dict[str, Any], row: pd.Series | dict, data_folder: Path
+) -> float:
+    value = _row_value(row, ["CreationTime", "creation_time"], False)
+    if value is not None:
+        return _followup_adjustment(rule, row)
+    patient_id, site_id, session_id, _ = _record_parts(row)
+    value = _date_lookup(data_folder).get((patient_id, site_id, session_id))
+    return _followup_adjustment(rule, {"CreationTime": value})
 
 
 def _record_parts(row: pd.Series | dict) -> tuple[str, str, str, str]:
@@ -303,6 +424,38 @@ def _copy_pretrained(model_folder: Path) -> Path:
     return destination
 
 
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for block in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def _refresh_model_metadata(
+    model_root: Path,
+    training_records: int,
+    training_labels: list[int],
+    date_rule: dict[str, Any],
+    followup_rule: dict[str, Any],
+) -> None:
+    metadata_path = model_root / "metadata.json"
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    metadata["training_records"] = int(training_records)
+    metadata["training_labeled_records"] = len(training_labels)
+    metadata["training_positives"] = int(sum(training_labels))
+    metadata["creation_time_residual"]["fit_source"] = date_rule.get("source")
+    metadata["followup_residual"]["fit_source"] = followup_rule.get("source")
+    for filename, file_metadata in metadata.get("files", {}).items():
+        path = model_root / filename
+        if path.is_file():
+            file_metadata["bytes"] = path.stat().st_size
+            file_metadata["sha256"] = _sha256(path)
+    metadata_path.write_text(
+        json.dumps(metadata, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+
+
 def train_model(data_folder, model_folder, verbose):
     data_folder = Path(data_folder)
     model_folder = Path(model_folder)
@@ -319,6 +472,18 @@ def train_model(data_folder, model_folder, verbose):
         date_rule["fallback_reason"] = str(exception)
     (model_root / DATE_RULE_FILENAME).write_text(
         json.dumps(date_rule, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    try:
+        followup_rule = _fit_followup_rule(frame)
+    except ValueError as exception:
+        followup_rule = json.loads(
+            (PRETRAINED_DIR / FOLLOWUP_RULE_FILENAME).read_text(encoding="utf-8")
+        )
+        followup_rule["source"] = "packaged_fallback_for_incomplete_training_fields"
+        followup_rule["fallback_reason"] = str(exception)
+    (model_root / FOLLOWUP_RULE_FILENAME).write_text(
+        json.dumps(followup_rule, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
     )
     data_root = _data_root(data_folder)
     candidates: list[tuple[dict[str, Any], int]] = []
@@ -373,6 +538,13 @@ def train_model(data_folder, model_folder, verbose):
             "bias_after": bias_after,
         }
         torch.save(checkpoint, checkpoint_path)
+    _refresh_model_metadata(
+        model_root,
+        training_records=len(frame),
+        training_labels=[label for _, label in candidates],
+        date_rule=date_rule,
+        followup_rule=followup_rule,
+    )
     (model_folder / "training_metadata.json").write_text(
         json.dumps(
             {
@@ -385,6 +557,8 @@ def train_model(data_folder, model_folder, verbose):
                 "adaptation_learning_rate": ADAPTATION_LEARNING_RATE,
                 "date_residual": date_rule,
                 "caisr_residual": "packaged_full_large_training_fit",
+                "followup_residual": followup_rule,
+                "residual_blend_weight": 0.5,
             },
             indent=2,
             sort_keys=True,
@@ -404,6 +578,9 @@ def load_model(model_folder, verbose):
     runtime["caisr_rule"] = json.loads(
         (model_root / CAISR_RULE_FILENAME).read_text(encoding="utf-8")
     )
+    runtime["followup_rule"] = json.loads(
+        (model_root / FOLLOWUP_RULE_FILENAME).read_text(encoding="utf-8")
+    )
     if verbose:
         print(
             f"Loaded frozen E1 + {len(runtime['sequences'])}-member Raw full-night ensemble",
@@ -413,24 +590,62 @@ def load_model(model_folder, verbose):
 
 
 def run_model(model, record, data_folder, verbose):
-    patient_id, site_id, _, record_id = _record_parts(record)
-    data_root = _data_root(Path(data_folder))
-    psg_path, caisr_path = _record_paths(data_root, site_id, record_id)
-    logit, diagnostics = predict_psg(model, psg_path, record_id, site_id)
-    date_adjustment = _runtime_date_adjustment(
-        model["date_rule"], record, Path(data_folder)
+    data_folder = Path(data_folder)
+    patient_id = _clean_identifier(
+        _row_value(
+            record,
+            ["BidsFolder", "bids_folder", "patient_id", "PatientID"],
+            False,
+        )
     )
-    caisr_adjustment, caisr_status = _caisr_adjustment(
-        model["caisr_rule"], psg_path, caisr_path, record_id
-    )
-    logit += date_adjustment + caisr_adjustment
+    record_id = patient_id or "unknown"
+    psg_path = None
+    caisr_path = None
+    diagnostics = {"eligible_epoch_count": 0, "complete_epoch_count": 0}
+    raw_status = "fallback"
+    try:
+        patient_id, site_id, _, record_id = _record_parts(record)
+        data_root = _data_root(data_folder)
+        psg_path, caisr_path = _record_paths(data_root, site_id, record_id)
+        logit, diagnostics = predict_psg(model, psg_path, record_id, site_id)
+        if not np.isfinite(logit):
+            raise FloatingPointError("Non-finite Raw CI logit")
+        raw_status = "ok"
+    except Exception as exception:
+        logit = 0.0
+        raw_status = f"fallback:{type(exception).__name__}"
+
+    try:
+        date_adjustment = _runtime_date_adjustment(
+            model["date_rule"], record, data_folder
+        )
+    except Exception:
+        date_adjustment = 0.0
+    if psg_path is None:
+        caisr_adjustment, caisr_status = 0.0, "raw-unavailable"
+    else:
+        caisr_adjustment, caisr_status = _caisr_adjustment(
+            model["caisr_rule"], psg_path, caisr_path, record_id
+        )
+    try:
+        followup_adjustment = _runtime_followup_adjustment(
+            model["followup_rule"], record, data_folder
+        )
+    except Exception:
+        followup_adjustment = 0.0
+    logit += 0.5 * (date_adjustment + caisr_adjustment + followup_adjustment)
+    if not np.isfinite(logit):
+        logit = 0.0
     probability = 1.0 / (1.0 + math.exp(-float(np.clip(logit, -40.0, 40.0))))
     if verbose:
         print(
             f"{patient_id}: {diagnostics['eligible_epoch_count']}/"
             f"{diagnostics['complete_epoch_count']} eligible epochs; "
+            f"Raw={raw_status}; "
             f"date adjustment={date_adjustment:.4f}; "
-            f"CAISR adjustment={caisr_adjustment:.4f} ({caisr_status})",
+            f"CAISR adjustment={caisr_adjustment:.4f} ({caisr_status}); "
+            f"follow-up adjustment={followup_adjustment:.4f}; "
+            "residual blend=0.5",
             flush=True,
         )
     return bool(probability >= DEFAULT_THRESHOLD), float(probability)

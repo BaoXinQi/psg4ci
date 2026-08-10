@@ -1,17 +1,17 @@
 {
   "demographics": true,
-  "creation_time_tail_risk": {
+  "creation_time_follow_up_risk": {
     "age_gap_years": 2.0,
     "coefficient_constraint": "nonnegative",
     "fit": "site-macro legal-pair logistic",
     "file": "date_residual.json",
-    "inference_transform": "within-site unlabeled CreationTime percentile"
+    "inference_transform": "distance from within-site latest CreationTime with fixed 2192-day horizon"
   },
   "ensemble": "equal-weight mean of logits",
   "files": {
     "date_residual.json": {
-      "bytes": 341,
-      "sha256": "02dd533812ed991e18846c780e02f87fd5a022a231e6494238443cdfe8b242d5"
+      "bytes": 398,
+      "sha256": "fa7a0b7d7ab1ea9db7be4d841194ff8c6ef2706eb82ae74878404ff5590494bd"
     },
     "e1_encoder.pt": {
       "bytes": 2790341,
@@ -36,7 +36,7 @@
       "sha256": "6c1a13fc5a5283d1e811e7c4578d0c43740357f66e70bbe466c64b750b434dc6"
     }
   },
-  "model": "frozen E1 + three-member weak domain-adversarial Raw ensemble + site-relative CreationTime tail risk",
+  "model": "frozen E1 + three-member weak domain-adversarial Raw ensemble + site-relative 2192-day follow-up risk",
   "domain_adversary": {
     "training_only": true,
     "gradient_reversal_strength": 0.05,

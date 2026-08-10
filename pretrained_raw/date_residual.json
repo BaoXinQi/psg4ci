@@ -1,13 +1,12 @@
 {
   "age_gap_years": 2.0,
-  "creation_day_mean": 15867.10959758172,
-  "creation_day_std": 1057.5529791044469,
-  "date_coefficient": 1.0676897799525664,
+  "tail_coefficient": 0.827970536218443,
+  "tail_feature": "-log(max(1 - within-site percentile, 0.5 / site_size))",
   "source": "packaged_full_large_training_fit",
   "training_pair_counts": {
     "I0002": 1886,
     "I0006": 14493,
     "S0001": 182330
   },
-  "version": "creation_time_site_macro_pairwise_v1"
+  "version": "creation_time_site_relative_tail_v1"
 }

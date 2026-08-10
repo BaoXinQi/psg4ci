@@ -1,73 +1,47 @@
 {
-  "demographics": false,
-  "domain_adversary": {
-    "gradient_reversal_strength": 0.05,
-    "inference_requires_site": false,
-    "training_only": true
+  "demographics": true,
+  "creation_time_residual": {
+    "age_gap_years": 2.0,
+    "coefficient_constraint": "nonnegative",
+    "fit": "site-macro legal-pair logistic",
+    "file": "date_residual.json"
   },
-  "ensemble": "equal-weight mean of six logits; three members per family",
-  "family_weights": {
-    "domain_v4": 0.5,
-    "v3": 0.5
-  },
+  "ensemble": "equal-weight mean of logits",
   "files": {
+    "date_residual.json": {
+      "bytes": 346,
+      "sha256": "9c38e0e9501a39b49a6a07038255b9029756ffa64c14107207f982093e8a3549"
+    },
     "e1_encoder.pt": {
       "bytes": 2790341,
       "sha256": "e9f135c973c0540970f34acbde89096c028eb3a95a0a601d85f21e8f83d36ac0"
     },
-    "raw_sequence_domain_v4_seed_20260806.pt": {
-      "bytes": 11108906,
+    "raw_sequence_seed_20260806.pt": {
+      "bytes": 11108156,
       "epochs": 2,
-      "family": "domain_v4",
       "seed": 20260806,
-      "sha256": "743fe6a4301a4acd4ddab89a76dce71be3f38d6722958c69eeb6a0fc540af115"
+      "sha256": "fce64a9ab1604896eb1d677cfc785b2dfabcaad9e471400d4ef01bef4f13bc59"
     },
-    "raw_sequence_domain_v4_seed_20260807.pt": {
-      "bytes": 11108906,
+    "raw_sequence_seed_20260807.pt": {
+      "bytes": 11108156,
       "epochs": 4,
-      "family": "domain_v4",
       "seed": 20260807,
-      "sha256": "a652990cebd5f423620bf04d8d9f5747585b81f53a194cf52e8d8d4d7510a9a6"
+      "sha256": "f5afa23b2b323b2b2222f70ffe9d19578b915871c37b557024746b8517d57e4f"
     },
-    "raw_sequence_domain_v4_seed_20260808.pt": {
-      "bytes": 11108906,
+    "raw_sequence_seed_20260808.pt": {
+      "bytes": 11108156,
       "epochs": 1,
-      "family": "domain_v4",
       "seed": 20260808,
-      "sha256": "fa5dc8ffa1797c6bb99daff65dc622f67eca41059bc2fa1991df4efc7dbcc620"
-    },
-    "raw_sequence_v3_seed_20260806.pt": {
-      "bytes": 11108381,
-      "epochs": 2,
-      "family": "v3",
-      "seed": 20260806,
-      "sha256": "6eca93147d196897a85a2d05021fc4ce83500a5371ca70af28640ba894dae291"
-    },
-    "raw_sequence_v3_seed_20260807.pt": {
-      "bytes": 11108381,
-      "epochs": 4,
-      "family": "v3",
-      "seed": 20260807,
-      "sha256": "5e4ab7d11d728dfeb4407b0ef1563d1b71281da5c5999854f073e4a12b3f4e83"
-    },
-    "raw_sequence_v3_seed_20260808.pt": {
-      "bytes": 11108381,
-      "epochs": 1,
-      "family": "v3",
-      "seed": 20260808,
-      "sha256": "a0a408711af43d0c394f3f2a8446957ab75df5b9b1b5d45f953aa02014451cc9"
+      "sha256": "862025875338e1e24b731b6c245e48d1de8cd532bce7179e02835f75183fe000"
     }
   },
-  "model": "frozen E1 + fixed equal-logit v3/domain-v4 family blend",
+  "model": "frozen E1 + three-member M2 Raw ensemble + CreationTime residual",
   "pair_scope": "same_site",
   "pairwise_weight": 0.15,
   "sequence_files": [
-    "raw_sequence_v3_seed_20260806.pt",
-    "raw_sequence_v3_seed_20260807.pt",
-    "raw_sequence_v3_seed_20260808.pt",
-    "raw_sequence_domain_v4_seed_20260806.pt",
-    "raw_sequence_domain_v4_seed_20260807.pt",
-    "raw_sequence_domain_v4_seed_20260808.pt"
+    "raw_sequence_seed_20260806.pt",
+    "raw_sequence_seed_20260807.pt",
+    "raw_sequence_seed_20260808.pt"
   ],
   "status": "complete",
   "training_positives": 498,

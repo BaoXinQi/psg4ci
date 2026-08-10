@@ -295,9 +295,10 @@ def find_patients(patient_data_file):
     needed to locate specific physiological files.
     """
     df = pd.read_csv(patient_data_file)
-    # Get the unique combinations of patient, site, and session
+    # Preserve the complete row so team inference remains record-wise for
+    # optional fields such as CreationTime.
     cols = [HEADERS['bids_folder'], HEADERS['site_id'], HEADERS['session_id']]
-    patient_info = df[cols].drop_duplicates()
+    patient_info = df.drop_duplicates(subset=cols)
 
     return patient_info.to_dict('records')
 

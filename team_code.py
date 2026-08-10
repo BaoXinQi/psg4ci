@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PhysioNet Challenge 2026 domain-robust Raw model with 5-year eligibility-gap risk."""
+"""Domain-Raw full-night model with record-wise date and CAISR residuals."""
 
 from __future__ import annotations
 
@@ -15,20 +15,20 @@ import torch
 
 from helper_code import *  # noqa: F401,F403
 
+import online_features
 from raw_sequence_runtime import load_runtime, predict_psg
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 PRETRAINED_DIR = SCRIPT_DIR / "pretrained_raw"
-MODEL_SUBDIR = "raw_sequence_v11_domain_eligibility_gap5y"
+MODEL_SUBDIR = "raw_sequence_v13_domain_date_caisr"
 DEFAULT_THRESHOLD = 0.5
 ADAPTATION_RECORDS = 6
 ADAPTATION_LEARNING_RATE = 1e-6
 DATE_RULE_FILENAME = "date_residual.json"
+CAISR_RULE_FILENAME = "caisr_residual.json"
 AGE_GAP = 2.0
-FOLLOW_UP_HORIZON_DAYS = 5.0 * 365.25
-DAYS_PER_YEAR = 365.25
-_DATE_LOOKUP_CACHE: dict[str, dict[tuple[str, str, str], float]] = {}
+_DATE_LOOKUP_CACHE: dict[str, dict[tuple[str, str, str], Any]] = {}
 
 
 def _clean_identifier(value: Any) -> str:
@@ -75,7 +75,7 @@ def _creation_day(value: Any) -> float:
 def _legal_date_differences(frame: pd.DataFrame) -> np.ndarray:
     labels = frame["label"].to_numpy(dtype=int)
     ages = frame["age"].to_numpy(dtype=float)
-    dates = frame["follow_up_risk"].to_numpy(dtype=float)
+    dates = frame["date_z"].to_numpy(dtype=float)
     positive = np.flatnonzero(labels == 1)
     negative = np.flatnonzero(labels == 0)
     legal = np.abs(ages[positive, None] - ages[negative][None, :]) <= AGE_GAP
@@ -132,10 +132,9 @@ def _fit_date_rule(frame: pd.DataFrame) -> dict[str, Any]:
     working = pd.DataFrame(rows)
     if working.empty:
         raise ValueError("No complete labeled rows are available for the date residual")
-    site_latest_day = working.groupby("site")["day"].transform("max")
-    working["follow_up_risk"] = np.maximum(
-        FOLLOW_UP_HORIZON_DAYS - (site_latest_day - working["day"]), 0.0
-    ) / DAYS_PER_YEAR
+    mean_day = float(working["day"].mean())
+    std_day = max(float(working["day"].to_numpy().std()), 1e-6)
+    working["date_z"] = (working["day"] - mean_day) / std_day
     groups = []
     pair_counts = {}
     for site, site_frame in working.groupby("site", sort=True):
@@ -147,28 +146,33 @@ def _fit_date_rule(frame: pd.DataFrame) -> dict[str, Any]:
         raise ValueError(f"Too few legal date pairs: {pair_counts}")
     coefficient = _fit_positive_site_macro_coefficient(groups)
     return {
-        "version": "creation_time_site_relative_5y_eligibility_gap_v1",
+        "version": "creation_time_site_macro_pairwise_v1",
         "source": "official_training_labels",
         "age_gap_years": AGE_GAP,
-        "follow_up_horizon_days": FOLLOW_UP_HORIZON_DAYS,
-        "follow_up_feature": "max(5*365.25 - (site_latest_day - creation_day), 0) / 365.25",
-        "follow_up_coefficient": coefficient,
+        "creation_day_mean": mean_day,
+        "creation_day_std": std_day,
+        "date_coefficient": coefficient,
         "training_pair_counts": pair_counts,
     }
 
 
-def _date_adjustment(rule: dict[str, Any], follow_up_risk: float) -> float:
-    if not np.isfinite(follow_up_risk):
+def _date_adjustment(rule: dict[str, Any], row: pd.Series | dict) -> float:
+    value = _row_value(row, ["CreationTime", "creation_time"], False)
+    day = _creation_day(value)
+    if not np.isfinite(day):
         return 0.0
-    return float(rule["follow_up_coefficient"]) * float(follow_up_risk)
+    standardized = (
+        day - float(rule["creation_day_mean"])
+    ) / float(rule["creation_day_std"])
+    return float(rule["date_coefficient"]) * standardized
 
 
-def _date_lookup(data_folder: Path) -> dict[tuple[str, str, str], float]:
+def _date_lookup(data_folder: Path) -> dict[tuple[str, str, str], Any]:
     path = _demographics_path(data_folder).resolve()
     key = str(path)
     if key not in _DATE_LOOKUP_CACHE:
         frame = pd.read_csv(path)
-        records = []
+        lookup = {}
         for row in frame.to_dict(orient="records"):
             patient_id = _clean_identifier(
                 _row_value(
@@ -182,30 +186,9 @@ def _date_lookup(data_folder: Path) -> dict[tuple[str, str, str], float]:
             session_id = _clean_identifier(
                 _row_value(row, ["SessionID", "session_id", "session"])
             )
-            records.append(
-                {
-                    "key": (patient_id, site_id, session_id),
-                    "site": site_id,
-                    "day": _creation_day(
-                        _row_value(row, ["CreationTime", "creation_time"], False)
-                    ),
-                }
+            lookup[(patient_id, site_id, session_id)] = _row_value(
+                row, ["CreationTime", "creation_time"], False
             )
-        dates = pd.DataFrame(records)
-        dates["follow_up_risk"] = np.nan
-        valid = dates["site"].ne("") & np.isfinite(dates["day"])
-        valid_dates = dates.loc[valid].copy()
-        site_latest_day = valid_dates.groupby("site")["day"].transform("max")
-        dates.loc[valid_dates.index, "follow_up_risk"] = np.maximum(
-            FOLLOW_UP_HORIZON_DAYS - (site_latest_day - valid_dates["day"]),
-            0.0,
-        ) / DAYS_PER_YEAR
-        lookup = {
-            row["key"]: float(row["follow_up_risk"])
-            if np.isfinite(row["follow_up_risk"])
-            else 0.0
-            for row in dates.to_dict(orient="records")
-        }
         _DATE_LOOKUP_CACHE[key] = lookup
     return _DATE_LOOKUP_CACHE[key]
 
@@ -213,11 +196,14 @@ def _date_lookup(data_folder: Path) -> dict[tuple[str, str, str], float]:
 def _runtime_date_adjustment(
     rule: dict[str, Any], row: pd.Series | dict, data_folder: Path
 ) -> float:
+    direct = _date_adjustment(rule, row)
+    if direct != 0.0 or _row_value(
+        row, ["CreationTime", "creation_time"], False
+    ) is not None:
+        return direct
     patient_id, site_id, session_id, _ = _record_parts(row)
-    follow_up_risk = _date_lookup(data_folder).get(
-        (patient_id, site_id, session_id), 0.0
-    )
-    return _date_adjustment(rule, follow_up_risk)
+    value = _date_lookup(data_folder).get((patient_id, site_id, session_id))
+    return _date_adjustment(rule, {"CreationTime": value})
 
 
 def _record_parts(row: pd.Series | dict) -> tuple[str, str, str, str]:
@@ -244,14 +230,67 @@ def _data_root(data_folder: Path) -> Path:
     raise FileNotFoundError(f"Could not find physiological_data under {data_folder}")
 
 
-def _record_path(data_root: Path, site_id: str, record_id: str) -> Path:
-    path = data_root / "physiological_data" / site_id / f"{record_id}.edf"
-    if path.is_file():
-        return path
-    matches = list((data_root / "physiological_data").glob(f"*/{record_id}.edf"))
-    if len(matches) != 1:
-        raise FileNotFoundError(f"PSG not found for {record_id}")
-    return matches[0]
+def _record_paths(
+    data_root: Path, site_id: str, record_id: str
+) -> tuple[Path, Path | None]:
+    psg_path = data_root / "physiological_data" / site_id / f"{record_id}.edf"
+    if not psg_path.is_file():
+        matches = list((data_root / "physiological_data").glob(f"*/{record_id}.edf"))
+        if len(matches) != 1:
+            raise FileNotFoundError(f"PSG not found for {record_id}")
+        psg_path = matches[0]
+    caisr_path = (
+        data_root
+        / "algorithmic_annotations"
+        / site_id
+        / f"{record_id}_caisr_annotations.edf"
+    )
+    if not caisr_path.is_file():
+        matches = list(
+            (data_root / "algorithmic_annotations").glob(
+                f"*/{record_id}_caisr_annotations.edf"
+            )
+        )
+        caisr_path = matches[0] if len(matches) == 1 else None
+    return psg_path, caisr_path
+
+
+def _numeric_feature(value: Any) -> float:
+    try:
+        output = float(value)
+    except (TypeError, ValueError):
+        return float("nan")
+    return output if np.isfinite(output) else float("nan")
+
+
+def _caisr_adjustment(
+    rule: dict[str, Any],
+    psg_path: Path,
+    caisr_path: Path | None,
+    record_id: str,
+) -> tuple[float, str]:
+    if caisr_path is None:
+        return 0.0, "missing"
+    try:
+        features = online_features.extract_caisr_features(
+            psg_path, caisr_path, record_id
+        )
+    except Exception:
+        return 0.0, "failed"
+    if _numeric_feature(features.get("caisr_file_available", 0.0)) <= 0.0:
+        return 0.0, "unavailable"
+    transform = rule["feature_transform"]
+    columns = [str(value) for value in rule["columns"]]
+    values = np.asarray(
+        [_numeric_feature(features.get(column)) for column in columns], dtype=float
+    )
+    median = np.asarray(transform["median"], dtype=float)
+    mean = np.asarray(transform["mean"], dtype=float)
+    std = np.asarray(transform["std"], dtype=float)
+    values = np.where(np.isfinite(values), values, median)
+    normalized = (values - mean) / std
+    coefficients = np.asarray(rule["feature_coefficients"], dtype=float)
+    return float(normalized @ coefficients), "ok"
 
 
 def _copy_pretrained(model_folder: Path) -> Path:
@@ -301,7 +340,7 @@ def train_model(data_folder, model_folder, verbose):
             break
         try:
             _, site_id, _, record_id = _record_parts(row)
-            path = _record_path(data_root, site_id, record_id)
+            path, _ = _record_paths(data_root, site_id, record_id)
             logit, _ = predict_psg(runtime, path, record_id, site_id)
             logits.append(logit)
             labels.append(label)
@@ -345,6 +384,7 @@ def train_model(data_folder, model_folder, verbose):
                 "sequences_frozen_except_final_bias": True,
                 "adaptation_learning_rate": ADAPTATION_LEARNING_RATE,
                 "date_residual": date_rule,
+                "caisr_residual": "packaged_full_large_training_fit",
             },
             indent=2,
             sort_keys=True,
@@ -361,6 +401,9 @@ def load_model(model_folder, verbose):
     runtime["date_rule"] = json.loads(
         (model_root / DATE_RULE_FILENAME).read_text(encoding="utf-8")
     )
+    runtime["caisr_rule"] = json.loads(
+        (model_root / CAISR_RULE_FILENAME).read_text(encoding="utf-8")
+    )
     if verbose:
         print(
             f"Loaded frozen E1 + {len(runtime['sequences'])}-member Raw full-night ensemble",
@@ -372,18 +415,22 @@ def load_model(model_folder, verbose):
 def run_model(model, record, data_folder, verbose):
     patient_id, site_id, _, record_id = _record_parts(record)
     data_root = _data_root(Path(data_folder))
-    psg_path = _record_path(data_root, site_id, record_id)
+    psg_path, caisr_path = _record_paths(data_root, site_id, record_id)
     logit, diagnostics = predict_psg(model, psg_path, record_id, site_id)
     date_adjustment = _runtime_date_adjustment(
         model["date_rule"], record, Path(data_folder)
     )
-    logit += date_adjustment
+    caisr_adjustment, caisr_status = _caisr_adjustment(
+        model["caisr_rule"], psg_path, caisr_path, record_id
+    )
+    logit += date_adjustment + caisr_adjustment
     probability = 1.0 / (1.0 + math.exp(-float(np.clip(logit, -40.0, 40.0))))
     if verbose:
         print(
             f"{patient_id}: {diagnostics['eligible_epoch_count']}/"
             f"{diagnostics['complete_epoch_count']} eligible epochs; "
-            f"date adjustment={date_adjustment:.4f}",
+            f"date adjustment={date_adjustment:.4f}; "
+            f"CAISR adjustment={caisr_adjustment:.4f} ({caisr_status})",
             flush=True,
         )
     return bool(probability >= DEFAULT_THRESHOLD), float(probability)

@@ -1,13 +1,13 @@
 {
   "age_gap_years": 2.0,
-  "follow_up_coefficient": 1.9435720633384372,
-  "follow_up_feature": "max(5*365.25 - (site_latest_day - creation_day), 0) / 365.25",
-  "follow_up_horizon_days": 1826.25,
+  "creation_day_mean": 15867.10959758172,
+  "creation_day_std": 1057.5529791044469,
+  "date_coefficient": 1.0676897799525664,
   "source": "packaged_full_large_training_fit",
   "training_pair_counts": {
     "I0002": 1886,
     "I0006": 14493,
     "S0001": 182330
   },
-  "version": "creation_time_site_relative_5y_eligibility_gap_v1"
+  "version": "creation_time_site_macro_pairwise_v1"
 }

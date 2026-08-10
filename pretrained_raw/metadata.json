@@ -1,17 +1,31 @@
 {
-  "demographics": true,
-  "creation_time_eligibility_gap_risk": {
-    "age_gap_years": 2.0,
-    "coefficient_constraint": "nonnegative",
-    "fit": "site-macro legal-pair logistic",
+  "caisr_residual": {
+    "features": 90,
+    "file": "caisr_residual.json",
+    "missing_behavior": "zero adjustment",
+    "record_wise": true
+  },
+  "creation_time_residual": {
     "file": "date_residual.json",
-    "inference_transform": "distance from within-site latest CreationTime with fixed five-year eligibility gap"
+    "inference_transform": "absolute CreationTime standardized by training-only mean and standard deviation",
+    "missing_behavior": "zero adjustment",
+    "record_wise": true
+  },
+  "demographics": true,
+  "domain_adversary": {
+    "gradient_reversal_strength": 0.05,
+    "inference_requires_site": false,
+    "training_only": true
   },
   "ensemble": "equal-weight mean of logits",
   "files": {
+    "caisr_residual.json": {
+      "bytes": 16171,
+      "sha256": "4515f528a11fde471f3738a26f7a446c99d081bb1589fc63c6af16f457dd5dde"
+    },
     "date_residual.json": {
-      "bytes": 409,
-      "sha256": "7faadd655286ce7e8e615ddd4ad3d4b47f1479a7a1fac4fb13b85389e242bf6c"
+      "bytes": 359,
+      "sha256": "98f73b4bf5013a7629e9aad5b7fbcd0653132a784b5af8035e832bd8008f9a5f"
     },
     "e1_encoder.pt": {
       "bytes": 2790341,
@@ -36,12 +50,7 @@
       "sha256": "6c1a13fc5a5283d1e811e7c4578d0c43740357f66e70bbe466c64b750b434dc6"
     }
   },
-  "model": "frozen E1 + three-member weak domain-adversarial Raw ensemble + site-relative five-year eligibility-gap risk",
-  "domain_adversary": {
-    "training_only": true,
-    "gradient_reversal_strength": 0.05,
-    "inference_requires_site": false
-  },
+  "model": "frozen E1 + three-member weak domain-adversarial Raw ensemble + record-wise absolute CreationTime + CAISR whole-night residual",
   "pair_scope": "same_site",
   "pairwise_weight": 0.15,
   "sequence_files": [

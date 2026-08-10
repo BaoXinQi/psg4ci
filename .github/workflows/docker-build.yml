@@ -25,13 +25,23 @@ jobs:
           docker build -t psg4ci-test .
           docker run --rm psg4ci-test python -c "import torch, pyedflib, edfio, sklearn, h5py, pandas, numpy; print('IMPORT_OK')"
           docker run --rm -i psg4ci-test python - <<'PY'
+          import json
           from pathlib import Path
 
           from raw_sequence_runtime import load_runtime
-          from team_code import run_model
+          from team_code import _caisr_adjustment, _date_adjustment, run_model
 
           model = load_runtime(Path("pretrained_raw"), threads=1)
           assert len(model["sequences"]) == 3
+          date_rule = json.loads(Path("pretrained_raw/date_residual.json").read_text())
+          caisr_rule = json.loads(Path("pretrained_raw/caisr_residual.json").read_text())
+          assert len(caisr_rule["columns"]) == 90
+          assert len(caisr_rule["feature_coefficients"]) == 90
+          assert _date_adjustment(date_rule, {"CreationTime": None}) == 0.0
+          adjustment, status = _caisr_adjustment(
+              caisr_rule, Path("/missing.edf"), None, "missing-smoke"
+          )
+          assert adjustment == 0.0 and status == "missing"
 
           try:
               run_model(

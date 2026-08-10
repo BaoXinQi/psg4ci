@@ -3,7 +3,7 @@ name: Docker Build Test
 on:
   workflow_dispatch:
   push:
-    branches: [ main, master ]
+    branches: [ main, master, candidate/v13-domain-date-caisr-recordwise ]
   pull_request:
 
 jobs:

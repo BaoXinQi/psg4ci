@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PhysioNet Challenge 2026 Raw full-night model with a date residual."""
+"""PhysioNet Challenge 2026 Raw model with site-relative date-tail risk."""
 
 from __future__ import annotations
 
@@ -20,13 +20,13 @@ from raw_sequence_runtime import load_runtime, predict_psg
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 PRETRAINED_DIR = SCRIPT_DIR / "pretrained_raw"
-MODEL_SUBDIR = "raw_sequence_v5_date"
+MODEL_SUBDIR = "raw_sequence_v6_tail"
 DEFAULT_THRESHOLD = 0.5
 ADAPTATION_RECORDS = 6
 ADAPTATION_LEARNING_RATE = 1e-6
 DATE_RULE_FILENAME = "date_residual.json"
 AGE_GAP = 2.0
-_DATE_LOOKUP_CACHE: dict[str, dict[tuple[str, str, str], Any]] = {}
+_DATE_LOOKUP_CACHE: dict[str, dict[tuple[str, str, str], float]] = {}
 
 
 def _clean_identifier(value: Any) -> str:
@@ -73,7 +73,7 @@ def _creation_day(value: Any) -> float:
 def _legal_date_differences(frame: pd.DataFrame) -> np.ndarray:
     labels = frame["label"].to_numpy(dtype=int)
     ages = frame["age"].to_numpy(dtype=float)
-    dates = frame["date_z"].to_numpy(dtype=float)
+    dates = frame["tail_risk"].to_numpy(dtype=float)
     positive = np.flatnonzero(labels == 1)
     negative = np.flatnonzero(labels == 0)
     legal = np.abs(ages[positive, None] - ages[negative][None, :]) <= AGE_GAP
@@ -130,9 +130,11 @@ def _fit_date_rule(frame: pd.DataFrame) -> dict[str, Any]:
     working = pd.DataFrame(rows)
     if working.empty:
         raise ValueError("No complete labeled rows are available for the date residual")
-    mean_day = float(working["day"].mean())
-    std_day = max(float(working["day"].to_numpy().std()), 1e-6)
-    working["date_z"] = (working["day"] - mean_day) / std_day
+    site_size = working.groupby("site")["day"].transform("size").astype(float)
+    percentile = working.groupby("site")["day"].rank(method="average", pct=True)
+    working["tail_risk"] = -np.log(
+        np.maximum(1.0 - percentile, 0.5 / site_size)
+    )
     groups = []
     pair_counts = {}
     for site, site_frame in working.groupby("site", sort=True):
@@ -144,33 +146,27 @@ def _fit_date_rule(frame: pd.DataFrame) -> dict[str, Any]:
         raise ValueError(f"Too few legal date pairs: {pair_counts}")
     coefficient = _fit_positive_site_macro_coefficient(groups)
     return {
-        "version": "creation_time_site_macro_pairwise_v1",
+        "version": "creation_time_site_relative_tail_v1",
         "source": "official_training_labels",
         "age_gap_years": AGE_GAP,
-        "creation_day_mean": mean_day,
-        "creation_day_std": std_day,
-        "date_coefficient": coefficient,
+        "tail_feature": "-log(max(1 - within-site percentile, 0.5 / site_size))",
+        "tail_coefficient": coefficient,
         "training_pair_counts": pair_counts,
     }
 
 
-def _date_adjustment(rule: dict[str, Any], row: pd.Series | dict) -> float:
-    value = _row_value(row, ["CreationTime", "creation_time"], False)
-    day = _creation_day(value)
-    if not np.isfinite(day):
+def _date_adjustment(rule: dict[str, Any], tail_risk: float) -> float:
+    if not np.isfinite(tail_risk):
         return 0.0
-    standardized = (
-        day - float(rule["creation_day_mean"])
-    ) / float(rule["creation_day_std"])
-    return float(rule["date_coefficient"]) * standardized
+    return float(rule["tail_coefficient"]) * float(tail_risk)
 
 
-def _date_lookup(data_folder: Path) -> dict[tuple[str, str, str], Any]:
+def _date_lookup(data_folder: Path) -> dict[tuple[str, str, str], float]:
     path = _demographics_path(data_folder).resolve()
     key = str(path)
     if key not in _DATE_LOOKUP_CACHE:
         frame = pd.read_csv(path)
-        lookup = {}
+        records = []
         for row in frame.to_dict(orient="records"):
             patient_id = _clean_identifier(
                 _row_value(
@@ -184,9 +180,32 @@ def _date_lookup(data_folder: Path) -> dict[tuple[str, str, str], Any]:
             session_id = _clean_identifier(
                 _row_value(row, ["SessionID", "session_id", "session"])
             )
-            lookup[(patient_id, site_id, session_id)] = _row_value(
-                row, ["CreationTime", "creation_time"], False
+            records.append(
+                {
+                    "key": (patient_id, site_id, session_id),
+                    "site": site_id,
+                    "day": _creation_day(
+                        _row_value(row, ["CreationTime", "creation_time"], False)
+                    ),
+                }
             )
+        dates = pd.DataFrame(records)
+        dates["tail_risk"] = np.nan
+        valid = dates["site"].ne("") & np.isfinite(dates["day"])
+        valid_dates = dates.loc[valid].copy()
+        site_size = valid_dates.groupby("site")["day"].transform("size").astype(float)
+        percentile = valid_dates.groupby("site")["day"].rank(
+            method="average", pct=True
+        )
+        dates.loc[valid_dates.index, "tail_risk"] = -np.log(
+            np.maximum(1.0 - percentile, 0.5 / site_size)
+        )
+        lookup = {
+            row["key"]: float(row["tail_risk"])
+            if np.isfinite(row["tail_risk"])
+            else 0.0
+            for row in dates.to_dict(orient="records")
+        }
         _DATE_LOOKUP_CACHE[key] = lookup
     return _DATE_LOOKUP_CACHE[key]
 
@@ -194,14 +213,9 @@ def _date_lookup(data_folder: Path) -> dict[tuple[str, str, str], Any]:
 def _runtime_date_adjustment(
     rule: dict[str, Any], row: pd.Series | dict, data_folder: Path
 ) -> float:
-    direct = _date_adjustment(rule, row)
-    if direct != 0.0 or _row_value(
-        row, ["CreationTime", "creation_time"], False
-    ) is not None:
-        return direct
     patient_id, site_id, session_id, _ = _record_parts(row)
-    value = _date_lookup(data_folder).get((patient_id, site_id, session_id))
-    return _date_adjustment(rule, {"CreationTime": value})
+    tail_risk = _date_lookup(data_folder).get((patient_id, site_id, session_id), 0.0)
+    return _date_adjustment(rule, tail_risk)
 
 
 def _record_parts(row: pd.Series | dict) -> tuple[str, str, str, str]:

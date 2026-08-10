@@ -1,16 +1,17 @@
 {
   "demographics": true,
-  "creation_time_residual": {
+  "creation_time_tail_risk": {
     "age_gap_years": 2.0,
     "coefficient_constraint": "nonnegative",
     "fit": "site-macro legal-pair logistic",
-    "file": "date_residual.json"
+    "file": "date_residual.json",
+    "inference_transform": "within-site unlabeled CreationTime percentile"
   },
   "ensemble": "equal-weight mean of logits",
   "files": {
     "date_residual.json": {
-      "bytes": 346,
-      "sha256": "9c38e0e9501a39b49a6a07038255b9029756ffa64c14107207f982093e8a3549"
+      "bytes": 341,
+      "sha256": "02dd533812ed991e18846c780e02f87fd5a022a231e6494238443cdfe8b242d5"
     },
     "e1_encoder.pt": {
       "bytes": 2790341,
@@ -35,7 +36,7 @@
       "sha256": "862025875338e1e24b731b6c245e48d1de8cd532bce7179e02835f75183fe000"
     }
   },
-  "model": "frozen E1 + three-member M2 Raw ensemble + CreationTime residual",
+  "model": "frozen E1 + three-member M2 Raw ensemble + site-relative CreationTime tail risk",
   "pair_scope": "same_site",
   "pairwise_weight": 0.15,
   "sequence_files": [

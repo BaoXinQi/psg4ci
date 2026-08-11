@@ -400,6 +400,16 @@ def _caisr_adjustment(
         return 0.0, "failed"
     if _numeric_feature(features.get("caisr_file_available", 0.0)) <= 0.0:
         return 0.0, "unavailable"
+    support_columns = (
+        "caisr_stage_valid_epoch_fraction",
+        "caisr_stage_probability_valid_epoch_fraction",
+        "caisr_arousal_valid_epoch_fraction",
+        "caisr_respiratory_valid_epoch_fraction",
+        "caisr_limb_valid_epoch_fraction",
+    )
+    support = [_numeric_feature(features.get(column)) for column in support_columns]
+    if not any(np.isfinite(value) and value > 0.0 for value in support):
+        return 0.0, "invalid"
     transform = rule["feature_transform"]
     columns = [str(value) for value in rule["columns"]]
     values = np.asarray(

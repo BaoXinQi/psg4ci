@@ -29,6 +29,7 @@ jobs:
           import math
           from pathlib import Path
 
+          import online_features
           from raw_sequence_runtime import load_runtime
           from team_code import (
               _caisr_adjustment,
@@ -55,6 +56,21 @@ jobs:
               caisr_rule, Path("/missing.edf"), None, "missing-smoke"
           )
           assert adjustment == 0.0 and status == "missing"
+
+          original_extractor = online_features.extract_caisr_features
+          online_features.extract_caisr_features = lambda *args, **kwargs: {
+              "caisr_file_available": 1.0,
+              "caisr_stage_valid_epoch_fraction": 0.0,
+              "caisr_stage_probability_valid_epoch_fraction": 0.0,
+              "caisr_arousal_valid_epoch_fraction": 0.0,
+              "caisr_respiratory_valid_epoch_fraction": 0.0,
+              "caisr_limb_valid_epoch_fraction": 0.0,
+          }
+          adjustment, status = _caisr_adjustment(
+              caisr_rule, Path("/present.edf"), Path("/invalid.edf"), "invalid-smoke"
+          )
+          online_features.extract_caisr_features = original_extractor
+          assert adjustment == 0.0 and status == "invalid"
 
           binary, probability = run_model(
               model,

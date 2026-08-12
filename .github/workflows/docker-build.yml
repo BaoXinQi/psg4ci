@@ -57,8 +57,18 @@ jobs:
           metadata = json.loads(Path("pretrained_raw/metadata.json").read_text())
           for filename, expected in metadata["files"].items():
               path = Path("pretrained_raw") / filename
-              assert path.stat().st_size == expected["bytes"]
-              assert hashlib.sha256(path.read_bytes()).hexdigest() == expected["sha256"]
+              actual_size = path.stat().st_size
+              actual_sha256 = hashlib.sha256(path.read_bytes()).hexdigest()
+              assert actual_size == expected["bytes"], (
+                  filename,
+                  actual_size,
+                  expected["bytes"],
+              )
+              assert actual_sha256 == expected["sha256"], (
+                  filename,
+                  actual_sha256,
+                  expected["sha256"],
+              )
           assert len(caisr_rule["columns"]) == 90
           assert len(caisr_rule["feature_coefficients"]) == 90
           assert _date_adjustment(date_rule, {"CreationTime": None}) == 0.0

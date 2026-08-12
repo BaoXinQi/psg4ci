@@ -1,0 +1,34 @@
+{
+  "age": {
+    "coefficient": 0.01730390705103754,
+    "mean": 62.035303030303034,
+    "missing_residual": 0.0,
+    "std": 8.510232471933682
+  },
+  "bmi": {
+    "coefficient": -0.2474639130937608,
+    "mean": 32.15245123537061,
+    "missing_residual": 0.0,
+    "std": 7.626018704844207
+  },
+  "explicit_missingness_features": false,
+  "fit": "same-site age-matched pairwise residual above frozen V14",
+  "record_wise_inference": true,
+  "session": {
+    "coefficient": 0.24080746174526338,
+    "feature": "log1p(max(SessionID - 1, 0))",
+    "mean": 0.04098133326883499,
+    "missing_residual": 0.0,
+    "std": 0.18504259335828954
+  },
+  "sex": {
+    "accepted_male_values": [
+      "Male",
+      "M"
+    ],
+    "male_coefficient": 0.09342668429592077,
+    "missing_or_unknown_residual": 0.0
+  },
+  "source": "full_large_training_outer_validated_joint_fit",
+  "version": "joint_recordwise_demographics_zero_fallback_v1"
+}

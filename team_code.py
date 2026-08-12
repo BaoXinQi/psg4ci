@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Domain-Raw model with record-wise date, CAISR, and follow-up residuals."""
+"""V14 with one joint record-wise SessionID/Age/BMI/Sex residual."""
 
 from __future__ import annotations
 
@@ -22,13 +22,14 @@ from raw_sequence_runtime import load_runtime, predict_psg
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 PRETRAINED_DIR = SCRIPT_DIR / "pretrained_raw"
-MODEL_SUBDIR = "raw_sequence_v14_recordwise_followup_blend"
+MODEL_SUBDIR = "raw_sequence_v15_joint_recordwise_demographics"
 DEFAULT_THRESHOLD = 0.5
 ADAPTATION_RECORDS = 6
 ADAPTATION_LEARNING_RATE = 1e-6
 DATE_RULE_FILENAME = "date_residual.json"
 CAISR_RULE_FILENAME = "caisr_residual.json"
 FOLLOWUP_RULE_FILENAME = "followup_residual.json"
+DEMOGRAPHICS_RULE_FILENAME = "recordwise_demographics_residual.json"
 AGE_GAP = 2.0
 FOLLOW_UP_HORIZON_DAYS = 2192.0
 DAYS_PER_YEAR = 365.25
@@ -316,6 +317,43 @@ def _followup_adjustment(rule: dict[str, Any], row: pd.Series | dict) -> float:
     return float(rule["risk_coefficient"]) * risk
 
 
+def _demographics_adjustment(rule: dict[str, Any], row: pd.Series | dict) -> float:
+    """Apply the joint rule to observed current-record fields only."""
+    adjustment = 0.0
+
+    session = pd.to_numeric(
+        _row_value(row, ["SessionID", "session_id", "session"], False),
+        errors="coerce",
+    )
+    if session is not None and np.isfinite(session):
+        session_rule = rule["session"]
+        feature = math.log1p(max(float(session) - 1.0, 0.0))
+        adjustment += float(session_rule["coefficient"]) * (
+            (feature - float(session_rule["mean"])) / float(session_rule["std"])
+        )
+
+    age = pd.to_numeric(_row_value(row, ["Age", "age"], False), errors="coerce")
+    if age is not None and np.isfinite(age):
+        age_rule = rule["age"]
+        adjustment += float(age_rule["coefficient"]) * (
+            (float(age) - float(age_rule["mean"])) / float(age_rule["std"])
+        )
+
+    bmi = pd.to_numeric(_row_value(row, ["BMI", "bmi"], False), errors="coerce")
+    if bmi is not None and np.isfinite(bmi):
+        bmi_rule = rule["bmi"]
+        adjustment += float(bmi_rule["coefficient"]) * (
+            (float(bmi) - float(bmi_rule["mean"])) / float(bmi_rule["std"])
+        )
+
+    sex = _row_value(row, ["Sex", "sex"], False)
+    sex_text = "" if sex is None else str(sex).strip().lower()
+    if sex_text in {"male", "m"}:
+        adjustment += float(rule["sex"]["male_coefficient"])
+
+    return float(adjustment)
+
+
 def _runtime_followup_adjustment(
     rule: dict[str, Any], row: pd.Series | dict, data_folder: Path
 ) -> float:
@@ -438,6 +476,7 @@ def _refresh_model_metadata(
     training_labels: list[int],
     date_rule: dict[str, Any],
     followup_rule: dict[str, Any],
+    demographics_rule: dict[str, Any],
 ) -> None:
     metadata_path = model_root / "metadata.json"
     metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
@@ -446,6 +485,14 @@ def _refresh_model_metadata(
     metadata["training_positives"] = int(sum(training_labels))
     metadata["creation_time_residual"]["fit_source"] = date_rule.get("source")
     metadata["followup_residual"]["fit_source"] = followup_rule.get("source")
+    metadata["recordwise_demographics_residual"] = {
+        "fit_source": demographics_rule.get("source"),
+        "fields": ["SessionID", "Age", "BMI", "Sex"],
+        "record_wise_inference": True,
+        "per_field_missing_behavior": "zero adjustment",
+        "explicit_missingness_features": False,
+    }
+    metadata.setdefault("files", {}).setdefault(DEMOGRAPHICS_RULE_FILENAME, {})
     for filename, file_metadata in metadata.get("files", {}).items():
         path = model_root / filename
         if path.is_file():
@@ -483,6 +530,13 @@ def train_model(data_folder, model_folder, verbose):
         followup_rule["fallback_reason"] = str(exception)
     (model_root / FOLLOWUP_RULE_FILENAME).write_text(
         json.dumps(followup_rule, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    demographics_rule = json.loads(
+        (PRETRAINED_DIR / DEMOGRAPHICS_RULE_FILENAME).read_text(encoding="utf-8")
+    )
+    (model_root / DEMOGRAPHICS_RULE_FILENAME).write_text(
+        json.dumps(demographics_rule, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
     data_root = _data_root(data_folder)
@@ -544,6 +598,7 @@ def train_model(data_folder, model_folder, verbose):
         training_labels=[label for _, label in candidates],
         date_rule=date_rule,
         followup_rule=followup_rule,
+        demographics_rule=demographics_rule,
     )
     (model_folder / "training_metadata.json").write_text(
         json.dumps(
@@ -558,6 +613,7 @@ def train_model(data_folder, model_folder, verbose):
                 "date_residual": date_rule,
                 "caisr_residual": "packaged_full_large_training_fit",
                 "followup_residual": followup_rule,
+                "recordwise_demographics_residual": demographics_rule,
                 "residual_blend_weight": 0.5,
             },
             indent=2,
@@ -580,6 +636,9 @@ def load_model(model_folder, verbose):
     )
     runtime["followup_rule"] = json.loads(
         (model_root / FOLLOWUP_RULE_FILENAME).read_text(encoding="utf-8")
+    )
+    runtime["demographics_rule"] = json.loads(
+        (model_root / DEMOGRAPHICS_RULE_FILENAME).read_text(encoding="utf-8")
     )
     if verbose:
         print(
@@ -634,6 +693,13 @@ def run_model(model, record, data_folder, verbose):
     except Exception:
         followup_adjustment = 0.0
     logit += 0.5 * (date_adjustment + caisr_adjustment + followup_adjustment)
+    try:
+        demographics_adjustment = _demographics_adjustment(
+            model["demographics_rule"], record
+        )
+    except Exception:
+        demographics_adjustment = 0.0
+    logit += demographics_adjustment
     if not np.isfinite(logit):
         logit = 0.0
     probability = 1.0 / (1.0 + math.exp(-float(np.clip(logit, -40.0, 40.0))))
@@ -645,7 +711,8 @@ def run_model(model, record, data_folder, verbose):
             f"date adjustment={date_adjustment:.4f}; "
             f"CAISR adjustment={caisr_adjustment:.4f} ({caisr_status}); "
             f"follow-up adjustment={followup_adjustment:.4f}; "
-            "residual blend=0.5",
+            f"recordwise-demographics adjustment={demographics_adjustment:.4f}; "
+            "V14 residual blend=0.5",
             flush=True,
         )
     return bool(probability >= DEFAULT_THRESHOLD), float(probability)

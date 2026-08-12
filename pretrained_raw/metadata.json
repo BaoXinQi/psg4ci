@@ -19,6 +19,18 @@
     "record_wise": true,
     "residual_blend_weight": 0.5
   },
+  "recordwise_demographics_residual": {
+    "explicit_missingness_features": false,
+    "fields": [
+      "SessionID",
+      "Age",
+      "BMI",
+      "Sex"
+    ],
+    "file": "recordwise_demographics_residual.json",
+    "per_field_missing_behavior": "zero adjustment",
+    "record_wise": true
+  },
   "demographics": true,
   "domain_adversary": {
     "gradient_reversal_strength": 0.05,
@@ -40,8 +52,12 @@
       "sha256": "e9f135c973c0540970f34acbde89096c028eb3a95a0a601d85f21e8f83d36ac0"
     },
     "followup_residual.json": {
-      "bytes": 554,
-      "sha256": "23afd3ff5504ae53d78d1099baf7330cddffe2fe35f4f427dc7ffb544fcc1468"
+      "bytes": 574,
+      "sha256": "295e055788c6aef737618c2b410887e900a35404e9c348db2154f3010defb3ff"
+    },
+    "recordwise_demographics_residual.json": {
+      "bytes": 923,
+      "sha256": "b33a074e01d493a8d97b9ad5fd64df909924d61fd9f6a54a2e591285707f469b"
     },
     "raw_sequence_seed_20260806.pt": {
       "bytes": 11108183,
@@ -62,7 +78,7 @@
       "sha256": "6c1a13fc5a5283d1e811e7c4578d0c43740357f66e70bbe466c64b750b434dc6"
     }
   },
-  "model": "frozen E1 + three-member weak domain-adversarial Raw ensemble + record-wise date, CAISR, and training-cutoff-marginalized follow-up blend",
+  "model": "V14 plus one joint record-wise SessionID/Age/BMI/Sex residual",
   "pair_scope": "same_site",
   "pairwise_weight": 0.15,
   "sequence_files": [

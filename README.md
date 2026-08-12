@@ -22,7 +22,8 @@ All inference features are record-wise. The entry does not estimate statistics
 from the hidden cohort. Its administrative cutoffs are constants learned from
 the training set, not from hidden-set dates. If `CreationTime` is missing, both
 date-derived adjustments are zero. If CAISR is missing or unreadable, its
-adjustment is zero.
+adjustment is zero. A CAISR file with no valid stage or event support is also
+treated as unavailable instead of being imputed into a nonzero residual.
 The four fields are handled independently. A missing or unparsable field has
 exactly zero contribution; there is no explicit missingness feature and no
 hidden-cohort imputation or normalization. No other record is inspected.

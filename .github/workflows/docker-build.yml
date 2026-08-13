@@ -3,7 +3,7 @@ name: Docker Build Test
 on:
   workflow_dispatch:
   push:
-    branches: [ main, master, candidate/v13-domain-date-caisr-recordwise ]
+    branches: [ main, master, candidate/v16-v14-edf-date-fallback ]
   pull_request:
 
 jobs:
@@ -25,16 +25,22 @@ jobs:
           docker build -t psg4ci-test .
           docker run --rm psg4ci-test python -c "import torch, pyedflib, edfio, sklearn, h5py, pandas, numpy; print('IMPORT_OK')"
           docker run --rm -i psg4ci-test python - <<'PY'
+          import hashlib
           import json
           import math
+          import tempfile
+          from datetime import datetime
           from pathlib import Path
 
+          import numpy as np
           import online_features
+          from pyedflib import highlevel
           from raw_sequence_runtime import load_runtime
           from team_code import (
               _caisr_adjustment,
               _date_adjustment,
               _followup_adjustment,
+              _runtime_creation_time,
               run_model,
           )
 
@@ -48,6 +54,21 @@ jobs:
           model["date_rule"] = date_rule
           model["caisr_rule"] = caisr_rule
           model["followup_rule"] = followup_rule
+          metadata = json.loads(Path("pretrained_raw/metadata.json").read_text())
+          for filename, expected in metadata["files"].items():
+              path = Path("pretrained_raw") / filename
+              actual_size = path.stat().st_size
+              actual_sha256 = hashlib.sha256(path.read_bytes()).hexdigest()
+              assert actual_size == expected["bytes"], (
+                  filename,
+                  actual_size,
+                  expected["bytes"],
+              )
+              assert actual_sha256 == expected["sha256"], (
+                  filename,
+                  actual_sha256,
+                  expected["sha256"],
+              )
           assert len(caisr_rule["columns"]) == 90
           assert len(caisr_rule["feature_coefficients"]) == 90
           assert _date_adjustment(date_rule, {"CreationTime": None}) == 0.0
@@ -85,5 +106,45 @@ jobs:
           )
           assert isinstance(binary, bool) and math.isfinite(probability)
 
-          print("MODEL_LOAD_AND_RECORD_FALLBACK_OK")
+          with tempfile.TemporaryDirectory() as temporary:
+              data_root = Path(temporary)
+              psg_dir = data_root / "physiological_data" / "I0004"
+              psg_dir.mkdir(parents=True)
+              psg_path = psg_dir / "sub-ci-smoke_ses-1.edf"
+              signal_headers = highlevel.make_signal_headers(
+                  ["EEG"], sample_frequency=1
+              )
+              header = highlevel.make_header(
+                  startdate=datetime(2020, 1, 2, 3, 4, 5)
+              )
+              highlevel.write_edf(
+                  str(psg_path),
+                  [np.zeros(1, dtype=float)],
+                  signal_headers,
+                  header,
+              )
+              value, source = _runtime_creation_time(
+                  {"CreationTime": None}, psg_path
+              )
+              assert source == "edf-header"
+              assert value == datetime(2020, 1, 2, 3, 4, 5)
+              explicit, source = _runtime_creation_time(
+                  {"CreationTime": "2019-02-03 04:05:06"}, psg_path
+              )
+              assert source == "metadata"
+              assert explicit == "2019-02-03 04:05:06"
+              binary, probability = run_model(
+                  model,
+                  {
+                      "BidsFolder": "sub-ci-smoke",
+                      "SiteID": "I0004",
+                      "SessionID": 1,
+                      "CreationTime": None,
+                  },
+                  data_root,
+                  False,
+              )
+              assert isinstance(binary, bool) and math.isfinite(probability)
+
+          print("MODEL_LOAD_SHORT_RECORD_AND_EDF_DATE_FALLBACK_OK")
           PY

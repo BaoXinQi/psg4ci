@@ -7,15 +7,15 @@
   },
   "creation_time_residual": {
     "file": "date_residual.json",
-    "inference_transform": "absolute CreationTime standardized by training-only mean and standard deviation",
-    "missing_behavior": "zero adjustment",
+    "inference_transform": "absolute current-record CreationTime, or current EDF start time when missing, standardized by training-only mean and standard deviation",
+    "missing_behavior": "current-record EDF start time, then zero adjustment",
     "record_wise": true
   },
   "followup_residual": {
     "cutoff_source": "training-only Last_Known_Visit_Date",
     "file": "followup_residual.json",
     "hidden_cohort_statistics": false,
-    "missing_behavior": "zero adjustment",
+    "missing_behavior": "current-record EDF start time, then zero adjustment",
     "record_wise": true,
     "residual_blend_weight": 0.5
   },
@@ -28,12 +28,12 @@
   "ensemble": "equal-weight mean of logits",
   "files": {
     "caisr_residual.json": {
-      "bytes": 16171,
-      "sha256": "4515f528a11fde471f3738a26f7a446c99d081bb1589fc63c6af16f457dd5dde"
+      "bytes": 15611,
+      "sha256": "977cc642d63337cb173c8ec3cae2d740340c586c9ab2a8372b51e980dd8d03cf"
     },
     "date_residual.json": {
-      "bytes": 359,
-      "sha256": "98f73b4bf5013a7629e9aad5b7fbcd0653132a784b5af8035e832bd8008f9a5f"
+      "bytes": 346,
+      "sha256": "9c38e0e9501a39b49a6a07038255b9029756ffa64c14107207f982093e8a3549"
     },
     "e1_encoder.pt": {
       "bytes": 2790341,

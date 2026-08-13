@@ -1,4 +1,4 @@
-# PhysioNet Challenge 2026: Record-wise follow-up uncertainty blend
+# PhysioNet Challenge 2026: V14 with record-wise EDF date fallback
 
 This entry uses only the official 6,600-record Large training set. Its inference
 path is:
@@ -17,11 +17,14 @@ path is:
    logit.
 
 All inference features are record-wise. The entry does not estimate statistics
-from the hidden cohort. Its administrative cutoffs are constants learned from
-the training set, not from hidden-set dates. If `CreationTime` is missing, both
-date-derived adjustments are zero. If CAISR is missing or unreadable, its
-adjustment is zero. A CAISR file with no valid stage or event support is also
-treated as unavailable instead of being imputed into a nonzero residual.
+from the hidden cohort or reopen the hidden demographics table. Its
+administrative cutoffs are constants learned from the training set, not from
+hidden-set dates. A valid current-record `CreationTime` always has priority. If
+it is missing or malformed, the current record's EDF start time supplies the
+date and follow-up adjustments. If both are unavailable, both adjustments are
+zero. If CAISR is missing or unreadable, its adjustment is zero. A CAISR file
+with no valid stage or event support is also treated as unavailable instead of
+being imputed into a nonzero residual.
 
 The packaged Raw and CAISR artifacts were fitted on the official Large training
 set. During the official training stage, the absolute-date and follow-up-risk

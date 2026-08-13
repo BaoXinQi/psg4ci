@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Domain-Raw model with record-wise date, CAISR, and follow-up residuals."""
+"""V14 Domain-Raw model with a record-wise EDF date fallback."""
 
 from __future__ import annotations
 
@@ -12,6 +12,7 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+import pyedflib
 import torch
 
 from helper_code import *  # noqa: F401,F403
@@ -22,7 +23,7 @@ from raw_sequence_runtime import load_runtime, predict_psg
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 PRETRAINED_DIR = SCRIPT_DIR / "pretrained_raw"
-MODEL_SUBDIR = "raw_sequence_v14_recordwise_followup_blend"
+MODEL_SUBDIR = "raw_sequence_v16_v14_edf_date_fallback"
 DEFAULT_THRESHOLD = 0.5
 ADAPTATION_RECORDS = 6
 ADAPTATION_LEARNING_RATE = 1e-6
@@ -32,7 +33,6 @@ FOLLOWUP_RULE_FILENAME = "followup_residual.json"
 AGE_GAP = 2.0
 FOLLOW_UP_HORIZON_DAYS = 2192.0
 DAYS_PER_YEAR = 365.25
-_DATE_LOOKUP_CACHE: dict[str, dict[tuple[str, str, str], Any]] = {}
 
 
 def _clean_identifier(value: Any) -> str:
@@ -271,60 +271,34 @@ def _date_adjustment(rule: dict[str, Any], row: pd.Series | dict) -> float:
     return float(rule["date_coefficient"]) * standardized
 
 
-def _date_lookup(data_folder: Path) -> dict[tuple[str, str, str], Any]:
-    path = _demographics_path(data_folder).resolve()
-    key = str(path)
-    if key not in _DATE_LOOKUP_CACHE:
-        frame = pd.read_csv(path)
-        lookup = {}
-        for row in frame.to_dict(orient="records"):
-            patient_id = _clean_identifier(
-                _row_value(
-                    row,
-                    ["BidsFolder", "bids_folder", "patient_id", "PatientID"],
-                )
-            )
-            site_id = _clean_identifier(
-                _row_value(row, ["SiteID", "site_id", "site"])
-            )
-            session_id = _clean_identifier(
-                _row_value(row, ["SessionID", "session_id", "session"])
-            )
-            lookup[(patient_id, site_id, session_id)] = _row_value(
-                row, ["CreationTime", "creation_time"], False
-            )
-        _DATE_LOOKUP_CACHE[key] = lookup
-    return _DATE_LOOKUP_CACHE[key]
+def _edf_creation_time(psg_path: Path | None) -> Any:
+    """Read the current record's normalized EDF start time, or fail closed."""
+    if psg_path is None or not Path(psg_path).is_file():
+        return None
+    try:
+        with pyedflib.EdfReader(str(psg_path)) as reader:
+            value = reader.getStartdatetime()
+    except Exception:
+        return None
+    return value if np.isfinite(_creation_day(value)) else None
 
 
-def _runtime_date_adjustment(
-    rule: dict[str, Any], row: pd.Series | dict, data_folder: Path
-) -> float:
-    direct = _date_adjustment(rule, row)
-    if direct != 0.0 or _row_value(
-        row, ["CreationTime", "creation_time"], False
-    ) is not None:
-        return direct
-    patient_id, site_id, session_id, _ = _record_parts(row)
-    value = _date_lookup(data_folder).get((patient_id, site_id, session_id))
-    return _date_adjustment(rule, {"CreationTime": value})
+def _runtime_creation_time(
+    row: pd.Series | dict, psg_path: Path | None
+) -> tuple[Any, str]:
+    value = _row_value(row, ["CreationTime", "creation_time"], False)
+    if np.isfinite(_creation_day(value)):
+        return value, "metadata"
+    value = _edf_creation_time(psg_path)
+    if np.isfinite(_creation_day(value)):
+        return value, "edf-header"
+    return None, "missing"
 
 
 def _followup_adjustment(rule: dict[str, Any], row: pd.Series | dict) -> float:
     value = _row_value(row, ["CreationTime", "creation_time"], False)
     risk = _followup_risk(rule, _creation_day(value))
     return float(rule["risk_coefficient"]) * risk
-
-
-def _runtime_followup_adjustment(
-    rule: dict[str, Any], row: pd.Series | dict, data_folder: Path
-) -> float:
-    value = _row_value(row, ["CreationTime", "creation_time"], False)
-    if value is not None:
-        return _followup_adjustment(rule, row)
-    patient_id, site_id, session_id, _ = _record_parts(row)
-    value = _date_lookup(data_folder).get((patient_id, site_id, session_id))
-    return _followup_adjustment(rule, {"CreationTime": value})
 
 
 def _record_parts(row: pd.Series | dict) -> tuple[str, str, str, str]:
@@ -625,10 +599,10 @@ def run_model(model, record, data_folder, verbose):
         logit = 0.0
         raw_status = f"fallback:{type(exception).__name__}"
 
+    creation_time, creation_time_source = _runtime_creation_time(record, psg_path)
+    resolved_creation = {"CreationTime": creation_time}
     try:
-        date_adjustment = _runtime_date_adjustment(
-            model["date_rule"], record, data_folder
-        )
+        date_adjustment = _date_adjustment(model["date_rule"], resolved_creation)
     except Exception:
         date_adjustment = 0.0
     if psg_path is None:
@@ -638,8 +612,8 @@ def run_model(model, record, data_folder, verbose):
             model["caisr_rule"], psg_path, caisr_path, record_id
         )
     try:
-        followup_adjustment = _runtime_followup_adjustment(
-            model["followup_rule"], record, data_folder
+        followup_adjustment = _followup_adjustment(
+            model["followup_rule"], resolved_creation
         )
     except Exception:
         followup_adjustment = 0.0
@@ -652,6 +626,7 @@ def run_model(model, record, data_folder, verbose):
             f"{patient_id}: {diagnostics['eligible_epoch_count']}/"
             f"{diagnostics['complete_epoch_count']} eligible epochs; "
             f"Raw={raw_status}; "
+            f"CreationTime={creation_time_source}; "
             f"date adjustment={date_adjustment:.4f}; "
             f"CAISR adjustment={caisr_adjustment:.4f} ({caisr_status}); "
             f"follow-up adjustment={followup_adjustment:.4f}; "

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""V14 Domain-Raw model with a record-wise EDF date fallback."""
+"""V14 Domain-Raw model with a weaker record-wise residual."""
 
 from __future__ import annotations
 
@@ -33,6 +33,7 @@ FOLLOWUP_RULE_FILENAME = "followup_residual.json"
 AGE_GAP = 2.0
 FOLLOW_UP_HORIZON_DAYS = 2192.0
 DAYS_PER_YEAR = 365.25
+RESIDUAL_BLEND_WEIGHT = 0.375
 
 
 def _clean_identifier(value: Any) -> str:
@@ -542,7 +543,7 @@ def train_model(data_folder, model_folder, verbose):
                 "date_residual": date_rule,
                 "caisr_residual": "packaged_full_large_training_fit",
                 "followup_residual": followup_rule,
-                "residual_blend_weight": 0.5,
+                "residual_blend_weight": RESIDUAL_BLEND_WEIGHT,
             },
             indent=2,
             sort_keys=True,
@@ -617,7 +618,9 @@ def run_model(model, record, data_folder, verbose):
         )
     except Exception:
         followup_adjustment = 0.0
-    logit += 0.5 * (date_adjustment + caisr_adjustment + followup_adjustment)
+    logit += RESIDUAL_BLEND_WEIGHT * (
+        date_adjustment + caisr_adjustment + followup_adjustment
+    )
     if not np.isfinite(logit):
         logit = 0.0
     probability = 1.0 / (1.0 + math.exp(-float(np.clip(logit, -40.0, 40.0))))
@@ -630,7 +633,7 @@ def run_model(model, record, data_folder, verbose):
             f"date adjustment={date_adjustment:.4f}; "
             f"CAISR adjustment={caisr_adjustment:.4f} ({caisr_status}); "
             f"follow-up adjustment={followup_adjustment:.4f}; "
-            "residual blend=0.5",
+            f"residual blend={RESIDUAL_BLEND_WEIGHT}",
             flush=True,
         )
     return bool(probability >= DEFAULT_THRESHOLD), float(probability)

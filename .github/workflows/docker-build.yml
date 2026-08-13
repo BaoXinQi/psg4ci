@@ -3,7 +3,11 @@ name: Docker Build Test
 on:
   workflow_dispatch:
   push:
-    branches: [ main, master, candidate/v16-v14-edf-date-fallback ]
+    branches:
+      - main
+      - master
+      - candidate/v16-v14-edf-date-fallback
+      - candidate/v17-v14-residual-0375
   pull_request:
 
 jobs:
@@ -37,6 +41,7 @@ jobs:
           from pyedflib import highlevel
           from raw_sequence_runtime import load_runtime
           from team_code import (
+              RESIDUAL_BLEND_WEIGHT,
               _caisr_adjustment,
               _date_adjustment,
               _followup_adjustment,
@@ -55,6 +60,8 @@ jobs:
           model["caisr_rule"] = caisr_rule
           model["followup_rule"] = followup_rule
           metadata = json.loads(Path("pretrained_raw/metadata.json").read_text())
+          assert RESIDUAL_BLEND_WEIGHT == 0.375
+          assert metadata["followup_residual"]["residual_blend_weight"] == 0.375
           for filename, expected in metadata["files"].items():
               path = Path("pretrained_raw") / filename
               actual_size = path.stat().st_size

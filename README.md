@@ -1,4 +1,4 @@
-# PhysioNet Challenge 2026: V14 with record-wise EDF date fallback
+# PhysioNet Challenge 2026: V14 with a weaker record-wise residual
 
 This entry uses only the official 6,600-record Large training set. Its inference
 path is:
@@ -13,8 +13,8 @@ path is:
 6. estimate three training-site administrative follow-up cutoffs from the
    training-only `Last_Known_Visit_Date` field and average the corresponding
    six-year follow-up-risk functions; and
-7. add half of the combined date, CAISR, and follow-up-risk residual to the Raw
-   logit.
+7. add `0.375` of the combined date, CAISR, and follow-up-risk residual to the
+   Raw logit.
 
 All inference features are record-wise. The entry does not estimate statistics
 from the hidden cohort or reopen the hidden demographics table. Its

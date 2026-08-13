@@ -17,7 +17,7 @@
     "hidden_cohort_statistics": false,
     "missing_behavior": "current-record EDF start time, then zero adjustment",
     "record_wise": true,
-    "residual_blend_weight": 0.5
+    "residual_blend_weight": 0.375
   },
   "demographics": true,
   "domain_adversary": {
@@ -62,7 +62,7 @@
       "sha256": "6c1a13fc5a5283d1e811e7c4578d0c43740357f66e70bbe466c64b750b434dc6"
     }
   },
-  "model": "frozen E1 + three-member weak domain-adversarial Raw ensemble + record-wise date, CAISR, and training-cutoff-marginalized follow-up blend",
+  "model": "frozen E1 + three-member weak domain-adversarial Raw ensemble + 0.375-weight record-wise date, CAISR, and training-cutoff-marginalized follow-up blend",
   "pair_scope": "same_site",
   "pairwise_weight": 0.15,
   "sequence_files": [

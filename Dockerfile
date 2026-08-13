@@ -9,5 +9,8 @@ RUN apt-get update && \
     apt-get install --yes --no-install-recommends libgomp1 && \
     rm -rf /var/lib/apt/lists/*
 
-RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch==2.0.1+cpu
+RUN pip install --no-cache-dir \
+    --index-url https://download.pytorch.org/whl/cpu \
+    --extra-index-url https://pypi.org/simple \
+    torch==2.0.1+cpu
 RUN pip install --no-cache-dir -r requirements.txt

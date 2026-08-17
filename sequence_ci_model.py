@@ -57,6 +57,7 @@ class FullNightEmbeddingDataset(Dataset):
             "demographics": torch.from_numpy(self.demographics[index]),
             "label": torch.tensor(float(row["_label"]), dtype=torch.float32),
             "age": torch.tensor(float(row["_age"]), dtype=torch.float32),
+            "site_id": str(row["SiteID"]),
             "record_id": str(row["record_id"]),
             "row_index": int(index),
         }
@@ -85,6 +86,7 @@ def collate_full_nights(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         "demographics": torch.stack([row["demographics"] for row in rows]),
         "label": torch.stack([row["label"] for row in rows]),
         "age": torch.stack([row["age"] for row in rows]),
+        "site_id": [str(row["site_id"]) for row in rows],
         "record_id": [str(row["record_id"]) for row in rows],
         "row_index": torch.as_tensor([int(row["row_index"]) for row in rows]),
     }

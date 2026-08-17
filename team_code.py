@@ -4,36 +4,28 @@
 from __future__ import annotations
 
 import json
-import hashlib
 import math
-import shutil
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 import pandas as pd
 import pyedflib
-import torch
 
 from helper_code import *  # noqa: F401,F403
 
 import online_features
+from full_training_constants import MODEL_SUBDIR, RESIDUAL_BLEND_WEIGHT
 from raw_sequence_runtime import load_runtime, predict_psg
 
 
-SCRIPT_DIR = Path(__file__).resolve().parent
-PRETRAINED_DIR = SCRIPT_DIR / "pretrained_raw"
-MODEL_SUBDIR = "raw_sequence_v16_v14_edf_date_fallback"
 DEFAULT_THRESHOLD = 0.5
-ADAPTATION_RECORDS = 6
-ADAPTATION_LEARNING_RATE = 1e-6
 DATE_RULE_FILENAME = "date_residual.json"
 CAISR_RULE_FILENAME = "caisr_residual.json"
 FOLLOWUP_RULE_FILENAME = "followup_residual.json"
 AGE_GAP = 2.0
 FOLLOW_UP_HORIZON_DAYS = 2192.0
 DAYS_PER_YEAR = 365.25
-RESIDUAL_BLEND_WEIGHT = 0.375
 
 
 def _clean_identifier(value: Any) -> str:
@@ -399,159 +391,11 @@ def _caisr_adjustment(
     return float(normalized @ coefficients), "ok"
 
 
-def _copy_pretrained(model_folder: Path) -> Path:
-    if not (PRETRAINED_DIR / "metadata.json").is_file():
-        raise FileNotFoundError(f"Packaged pretrained model is incomplete: {PRETRAINED_DIR}")
-    destination = model_folder / MODEL_SUBDIR
-    if destination.exists():
-        shutil.rmtree(destination)
-    shutil.copytree(PRETRAINED_DIR, destination)
-    return destination
-
-
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for block in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(block)
-    return digest.hexdigest()
-
-
-def _refresh_model_metadata(
-    model_root: Path,
-    training_records: int,
-    training_labels: list[int],
-    date_rule: dict[str, Any],
-    followup_rule: dict[str, Any],
-) -> None:
-    metadata_path = model_root / "metadata.json"
-    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
-    metadata["training_records"] = int(training_records)
-    metadata["training_labeled_records"] = len(training_labels)
-    metadata["training_positives"] = int(sum(training_labels))
-    metadata["creation_time_residual"]["fit_source"] = date_rule.get("source")
-    metadata["followup_residual"]["fit_source"] = followup_rule.get("source")
-    for filename, file_metadata in metadata.get("files", {}).items():
-        path = model_root / filename
-        if path.is_file():
-            file_metadata["bytes"] = path.stat().st_size
-            file_metadata["sha256"] = _sha256(path)
-    metadata_path.write_text(
-        json.dumps(metadata, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
-
-
 def train_model(data_folder, model_folder, verbose):
-    data_folder = Path(data_folder)
-    model_folder = Path(model_folder)
-    model_folder.mkdir(parents=True, exist_ok=True)
-    model_root = _copy_pretrained(model_folder)
-    frame = pd.read_csv(_demographics_path(data_folder))
-    try:
-        date_rule = _fit_date_rule(frame)
-    except ValueError as exception:
-        date_rule = json.loads(
-            (PRETRAINED_DIR / DATE_RULE_FILENAME).read_text(encoding="utf-8")
-        )
-        date_rule["source"] = "packaged_fallback_for_insufficient_training_pairs"
-        date_rule["fallback_reason"] = str(exception)
-    (model_root / DATE_RULE_FILENAME).write_text(
-        json.dumps(date_rule, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
-    try:
-        followup_rule = _fit_followup_rule(frame)
-    except ValueError as exception:
-        followup_rule = json.loads(
-            (PRETRAINED_DIR / FOLLOWUP_RULE_FILENAME).read_text(encoding="utf-8")
-        )
-        followup_rule["source"] = "packaged_fallback_for_incomplete_training_fields"
-        followup_rule["fallback_reason"] = str(exception)
-    (model_root / FOLLOWUP_RULE_FILENAME).write_text(
-        json.dumps(followup_rule, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
-    data_root = _data_root(data_folder)
-    candidates: list[tuple[dict[str, Any], int]] = []
-    for row in frame.to_dict(orient="records"):
-        label = _parse_binary(
-            _row_value(row, ["Cognitive_Impairment", "cognitive_impairment", "label"], False)
-        )
-        if label is not None:
-            candidates.append((row, label))
-    if not candidates:
-        raise ValueError("No labeled training records were found")
+    """Reproduce the complete Challenge-data training pipeline on the server."""
+    from full_training_pipeline import run_full_training
 
-    runtime = load_runtime(model_root)
-    logits: list[float] = []
-    labels: list[int] = []
-    failures: list[dict[str, str]] = []
-    for row, label in candidates:
-        if len(logits) >= ADAPTATION_RECORDS:
-            break
-        try:
-            _, site_id, _, record_id = _record_parts(row)
-            path, _ = _record_paths(data_root, site_id, record_id)
-            logit, _ = predict_psg(runtime, path, record_id, site_id)
-            logits.append(logit)
-            labels.append(label)
-            if verbose:
-                print(f"Raw adaptation audit: {len(logits)}/{ADAPTATION_RECORDS}", flush=True)
-        except Exception as exception:
-            failures.append({"record_id": str(row), "error": repr(exception)})
-    if not logits:
-        raise RuntimeError("No Raw adaptation audit record succeeded")
-
-    probabilities = 1.0 / (1.0 + np.exp(-np.clip(np.asarray(logits), -40.0, 40.0)))
-    gradient = float(np.mean(probabilities - np.asarray(labels, dtype=float)))
-    final_biases = [sequence.head[-1].bias for sequence in runtime["sequences"]]
-    before = [float(bias.detach().item()) for bias in final_biases]
-    with torch.no_grad():
-        for bias in final_biases:
-            bias.sub_(ADAPTATION_LEARNING_RATE * gradient)
-    after = [float(bias.detach().item()) for bias in final_biases]
-    for checkpoint_path, sequence, bias_before, bias_after in zip(
-        runtime["sequence_paths"], runtime["sequences"], before, after
-    ):
-        checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
-        checkpoint["model_state"] = {
-            name: value.detach().cpu() for name, value in sequence.state_dict().items()
-        }
-        checkpoint["official_training_adaptation"] = {
-            "records": len(logits),
-            "learning_rate": ADAPTATION_LEARNING_RATE,
-            "bias_before": bias_before,
-            "bias_after": bias_after,
-        }
-        torch.save(checkpoint, checkpoint_path)
-    _refresh_model_metadata(
-        model_root,
-        training_records=len(frame),
-        training_labels=[label for _, label in candidates],
-        date_rule=date_rule,
-        followup_rule=followup_rule,
-    )
-    (model_folder / "training_metadata.json").write_text(
-        json.dumps(
-            {
-                "labeled_records": len(candidates),
-                "raw_audit_records": len(logits),
-                "failed_audit_records": len(failures),
-                "encoder_frozen": True,
-                "sequence_ensemble_members": len(runtime["sequences"]),
-                "sequences_frozen_except_final_bias": True,
-                "adaptation_learning_rate": ADAPTATION_LEARNING_RATE,
-                "date_residual": date_rule,
-                "caisr_residual": "packaged_full_large_training_fit",
-                "followup_residual": followup_rule,
-                "residual_blend_weight": RESIDUAL_BLEND_WEIGHT,
-            },
-            indent=2,
-            sort_keys=True,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-    pd.DataFrame(failures).to_csv(model_folder / "training_failures.csv", index=False)
+    run_full_training(Path(data_folder), Path(model_folder), bool(verbose))
 
 
 def load_model(model_folder, verbose):

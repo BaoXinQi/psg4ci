@@ -10,7 +10,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 RUN pip install --no-cache-dir \
-    --index-url https://download.pytorch.org/whl/cpu \
+    --index-url https://download.pytorch.org/whl/cu118 \
     --extra-index-url https://pypi.org/simple \
-    torch==2.0.1+cpu
+    torch==2.0.1+cu118
 RUN pip install --no-cache-dir -r requirements.txt

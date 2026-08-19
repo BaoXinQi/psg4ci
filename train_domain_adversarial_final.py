@@ -26,6 +26,9 @@ from train_domain_adversarial_loso import (
 from train_sequence_ci_loso import evaluate_scores, make_loader
 
 
+PROTOCOL = "dynamic_full_training_m2_weak_domain_adversarial_v19"
+
+
 def sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
@@ -132,7 +135,7 @@ def main() -> None:
         checkpoint_path = args.output_dir / f"checkpoint_epoch_{epoch:02d}.pt"
         atomic_torch_save(
             {
-                "protocol": "dynamic_full_training_m2_weak_domain_adversarial_v18",
+                "protocol": PROTOCOL,
                 "epoch": int(epoch),
                 "epochs": args.fixed_epochs,
                 "seed": args.seed,
@@ -167,7 +170,7 @@ def main() -> None:
     final_path = args.output_dir / "final_model.pt"
     atomic_torch_save(
         {
-            "protocol": "dynamic_full_training_m2_weak_domain_adversarial_v18",
+            "protocol": PROTOCOL,
             "model_name": "raw_sequence",
             "records": record_count,
             "positives": positive_count,
@@ -195,7 +198,7 @@ def main() -> None:
     )
     summary = {
         "status": "complete",
-        "protocol": "dynamic_full_training_m2_weak_domain_adversarial_v18",
+        "protocol": PROTOCOL,
         "records": record_count,
         "positives": positive_count,
         "sites": frame["SiteID"].value_counts().sort_index().to_dict(),

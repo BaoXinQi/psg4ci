@@ -1,9 +1,9 @@
-# PhysioNet Challenge 2026: V19 adaptive full training
+# PhysioNet Challenge 2026: V20 weak E1 domain adversarial training
 
-This candidate reproduces the successful V18/V17/V14-Large method entirely on
-the Challenge server and adapts the short CI training budget to the E1 encoder
-that was created during the same run. It contains no model weights trained on
-Challenge data and has no pretrained-model fallback.
+This candidate preserves the complete V19 official-training and inference
+pipeline while adding a weak, training-only site adversary to the 30-second E1
+representation. It contains no model weights trained on Challenge data and has
+no pretrained-model fallback.
 
 `train_model` performs the following fixed pipeline:
 
@@ -13,6 +13,8 @@ Challenge data and has no pretrained-model fallback.
 3. align Human and CAISR annotations;
 4. train E1 for 15 FP32 epochs with seed `20260804`, 128 windows per record and
    the original physiology, masked-representation, and device-view objectives;
+   a training-only `192 -> 64 -> site` classifier has zero encoder reversal for
+   epochs 1-2 and then increases linearly to a maximum strength of `0.02`;
 5. export the EMA-teacher 192D embedding for every eligible 30-second window;
 6. for each CI seed, test epochs 1 through 6 using inner validation inside each
    of the three site-wise LOSO folds, choose the earliest near-best epoch in
@@ -28,7 +30,7 @@ Challenge data and has no pretrained-model fallback.
    a complete training audit in the official model folder.
 
 The probability-to-binary threshold remains 0.5. V18 already led the Reward
-leaderboard at this operating point, so V19 does not add a last-day threshold
+leaderboard at this operating point, so V20 does not add a last-day threshold
 search that could overfit the three public training sites.
 
 Inference remains record-wise. A valid current-record `CreationTime` has
@@ -36,7 +38,10 @@ priority; otherwise the current EDF header is used, followed by a zero
 adjustment. Missing or invalid CAISR also yields a zero CAISR adjustment. No
 hidden-cohort statistics are read or estimated.
 
-If adaptive selection fails its engineering checks, the pipeline fails closed
-to the scored V18 `2/4/1` budgets. The production protocol is otherwise locked.
-Reduced records or epochs are available
+The site classifier is absent from the deployed model and inference never uses
+SiteID. If the supplied training data contain fewer than two sites, this one
+training objective is disabled and E1 falls back to the original behavior. If
+adaptive sequence selection fails its engineering checks, the pipeline fails
+closed to the scored V18 `2/4/1` budgets. The production protocol is otherwise
+locked. Reduced records or epochs are available
 only when `PSG4CI_V18_TEST_MODE=1` is explicitly set for engineering tests.

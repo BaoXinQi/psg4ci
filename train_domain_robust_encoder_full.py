@@ -29,7 +29,7 @@ from torch.utils.data import DataLoader, IterableDataset, get_worker_info
 from domain_robust_encoder_model import DomainRobustPsgEncoder, MODALITY_CHANNELS
 
 
-VERSION = "domain_robust_encoder_full_v1"
+VERSION = "domain_robust_encoder_full_v20_e1da"
 MODALITIES = tuple(MODALITY_CHANNELS)
 SAMPLING_RATES = {"eeg": 128, "eog": 128, "ecg": 128, "resp": 32, "spo2": 1, "emg": 128}
 STAGE_CODES = (1, 2, 3, 4, 5)
@@ -58,6 +58,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--token-loss-weight", type=float, default=1.0)
     parser.add_argument("--covariance-loss-weight", type=float, default=0.05)
     parser.add_argument("--variance-loss-weight", type=float, default=1.25)
+    parser.add_argument("--site-adversary", action="store_true")
+    parser.add_argument("--domain-reversal-max", type=float, default=0.02)
+    parser.add_argument("--domain-warmup-epochs", type=int, default=2)
     parser.add_argument("--device", default="cuda")
     parser.add_argument("--amp", action="store_true")
     parser.add_argument("--index-only", action="store_true")
@@ -430,6 +433,10 @@ def attach_targets(
     batch["caisr_event_valid"] = torch.from_numpy(record["caisr_event_valid"][indices])
     batch["combined_stage"] = torch.from_numpy(record["combined_stage"][indices].astype(np.int64) - 1)
     batch["combined_stage_valid"] = torch.from_numpy(record["combined_stage_valid"][indices])
+    if "site_index" in record:
+        batch["site_index"] = torch.full(
+            (len(indices),), int(record["site_index"]), dtype=torch.long
+        )
 
 
 class RecordBatchDataset(IterableDataset):
@@ -787,19 +794,71 @@ def update_teacher(
         target.copy_(source)
 
 
+class _GradientReverse(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx: object, values: torch.Tensor, strength: float) -> torch.Tensor:
+        ctx.strength = float(strength)
+        return values.view_as(values)
+
+    @staticmethod
+    def backward(ctx: object, gradient: torch.Tensor) -> tuple[torch.Tensor, None]:
+        return -ctx.strength * gradient, None
+
+
+def reverse_gradient(values: torch.Tensor, strength: float) -> torch.Tensor:
+    return _GradientReverse.apply(values, float(strength))
+
+
+def site_classification_loss(
+    logits: torch.Tensor,
+    targets: torch.Tensor,
+    class_weights: torch.Tensor,
+) -> torch.Tensor:
+    per_window = F.cross_entropy(logits, targets, reduction="none")
+    return (per_window * class_weights[targets]).mean()
+
+
+def domain_reversal_strength(
+    epoch_index: int, total_epochs: int, warmup_epochs: int, maximum: float
+) -> float:
+    if maximum < 0.0:
+        raise ValueError("Domain reversal maximum must be non-negative")
+    if warmup_epochs < 0:
+        raise ValueError("Domain warmup epochs must be non-negative")
+    if epoch_index < warmup_epochs:
+        return 0.0
+    active_epochs = max(total_epochs - warmup_epochs, 1)
+    progress = (epoch_index - warmup_epochs + 1) / active_epochs
+    return float(maximum * min(max(progress, 0.0), 1.0))
+
+
 def train_epoch(
     model: DomainRobustPsgEncoder,
     teacher: DomainRobustPsgEncoder,
+    site_head: nn.Module | None,
+    site_class_weights: torch.Tensor | None,
     loader: DataLoader,
     optimizer: torch.optim.Optimizer,
     scaler: Any,
     device: torch.device,
     args: argparse.Namespace,
+    epoch_index: int,
 ) -> dict[str, float]:
     model.train()
     teacher.eval()
+    if site_head is not None:
+        site_head.train()
     totals: dict[str, float] = {}
     batches = 0
+    reversal_strength = domain_reversal_strength(
+        epoch_index,
+        args.epochs,
+        args.domain_warmup_epochs,
+        args.domain_reversal_max,
+    )
+    trainable_parameters = list(model.parameters())
+    if site_head is not None:
+        trainable_parameters.extend(site_head.parameters())
     for raw_batch in loader:
         batch = move_batch(raw_batch, device)
         student_view = augment_view(
@@ -826,7 +885,25 @@ def train_epoch(
             representation, representation_parts = representation_loss(
                 model, student_output, teacher_output, batch, student_view, args
             )
-            loss = supervised + representation
+            domain_loss = supervised.new_zeros(())
+            domain_accuracy = math.nan
+            if site_head is not None:
+                if "site_index" not in batch or site_class_weights is None:
+                    raise RuntimeError("Site-adversarial batch is missing site_index")
+                site_logits = site_head(
+                    reverse_gradient(student_output["embedding"], reversal_strength)
+                )
+                site_target = batch["site_index"].long()
+                domain_loss = site_classification_loss(
+                    site_logits, site_target, site_class_weights
+                )
+                domain_accuracy = float(
+                    (site_logits.argmax(dim=1) == site_target)
+                    .float()
+                    .mean()
+                    .detach()
+                )
+            loss = supervised + representation + domain_loss
         if not torch.isfinite(loss):
             raise FloatingPointError(
                 f"Non-finite loss for record={raw_batch.get('record_id')} "
@@ -834,7 +911,7 @@ def train_epoch(
             )
         scaler.scale(loss).backward()
         scaler.unscale_(optimizer)
-        gradient_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), 5.0)
+        gradient_norm = torch.nn.utils.clip_grad_norm_(trainable_parameters, 5.0)
         if not torch.isfinite(gradient_norm):
             raise FloatingPointError(
                 f"Non-finite gradient for record={raw_batch.get('record_id')} "
@@ -846,6 +923,14 @@ def train_epoch(
             raise FloatingPointError(f"AMP scale fell below 1.0: {scaler.get_scale()}")
         update_teacher(model, teacher, args.ema_decay)
         values = {"loss": float(loss.detach()), **supervised_parts, **representation_parts}
+        if site_head is not None:
+            values.update(
+                {
+                    "domain_loss": float(domain_loss.detach()),
+                    "domain_accuracy": domain_accuracy,
+                    "domain_reversal_strength": reversal_strength,
+                }
+            )
         for key, value in values.items():
             totals[key] = totals.get(key, 0.0) + value
         batches += 1
@@ -857,6 +942,14 @@ def train_epoch(
         ]
         if invalid:
             raise FloatingPointError(f"Non-finite {name} parameters: {invalid[:10]}")
+    if site_head is not None:
+        invalid = [
+            name
+            for name, parameter in site_head.named_parameters()
+            if not torch.isfinite(parameter).all()
+        ]
+        if invalid:
+            raise FloatingPointError(f"Non-finite site-head parameters: {invalid[:10]}")
     return {key: value / max(batches, 1) for key, value in totals.items()}
 
 
@@ -1103,6 +1196,10 @@ def main() -> None:
     args = parse_args()
     if args.resume and args.overwrite:
         raise RuntimeError("--resume and --overwrite are mutually exclusive")
+    if not math.isfinite(args.domain_reversal_max) or args.domain_reversal_max < 0.0:
+        raise ValueError("--domain-reversal-max must be finite and non-negative")
+    if args.domain_warmup_epochs < 0:
+        raise ValueError("--domain-warmup-epochs must be non-negative")
     set_seed(args.seed)
     manifest = pd.read_parquet(args.manifest).copy()
     manifest["record_id"] = manifest["record_id"].astype(str)
@@ -1127,6 +1224,24 @@ def main() -> None:
         raise RuntimeError(f"Output exists: {output_dir}; pass --resume or --overwrite")
     output_dir.mkdir(parents=True, exist_ok=True)
     records = index["records"]
+    training_sites = (
+        frame.loc[split_mask(frame, "train"), "SiteID"]
+        .fillna("__MISSING__")
+        .astype(str)
+    )
+    site_names = sorted(training_sites.unique().tolist())
+    site_to_index = {site: index for index, site in enumerate(site_names)}
+    record_sites = (
+        frame.set_index("record_id")["SiteID"]
+        .fillna("__MISSING__")
+        .astype(str)
+        .to_dict()
+    )
+    for record_id in set(train_ids + eval_ids):
+        records[record_id]["site_index"] = site_to_index[record_sites[record_id]]
+    site_adversary_enabled = bool(args.site_adversary and len(site_names) >= 2)
+    if args.site_adversary and not site_adversary_enabled:
+        print("Site adversary disabled because fewer than two sites are available", flush=True)
     eval_rows = build_eval_rows(records, eval_ids, args.eval_windows_per_record)
     eval_loader = make_loader(eval_rows, records, args, args.seed, shuffle=False)
 
@@ -1135,8 +1250,30 @@ def main() -> None:
     teacher = copy.deepcopy(model).to(device).eval()
     for parameter in teacher.parameters():
         parameter.requires_grad_(False)
+    site_head: nn.Module | None = None
+    site_class_weights: torch.Tensor | None = None
+    site_weight_map: dict[str, float] = {}
+    if site_adversary_enabled:
+        site_head = nn.Sequential(
+            nn.Linear(model.embedding_dimension, 64),
+            nn.GELU(),
+            nn.Linear(64, len(site_names)),
+        ).to(device)
+        site_counts = training_sites.value_counts().reindex(site_names).astype(float)
+        balanced_weights = len(training_sites) / (len(site_names) * site_counts)
+        site_weight_map = {
+            site: float(balanced_weights.loc[site]) for site in site_names
+        }
+        site_class_weights = torch.tensor(
+            [site_weight_map[site] for site in site_names],
+            dtype=torch.float32,
+            device=device,
+        )
+    optimizer_parameters = list(model.parameters())
+    if site_head is not None:
+        optimizer_parameters.extend(site_head.parameters())
     optimizer = torch.optim.AdamW(
-        model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay
+        optimizer_parameters, lr=args.learning_rate, weight_decay=args.weight_decay
     )
     scaler = make_grad_scaler(args.amp and device.type == "cuda")
     history: list[dict[str, Any]] = []
@@ -1152,8 +1289,19 @@ def main() -> None:
             raise RuntimeError(f"Checkpoint variant mismatch: {checkpoint.get('variant')}")
         if checkpoint.get("manifest_fingerprint") != manifest_fingerprint:
             raise RuntimeError("Checkpoint manifest does not match the requested manifest")
+        if bool(checkpoint.get("site_adversary_enabled", False)) != site_adversary_enabled:
+            raise RuntimeError("Checkpoint site-adversary setting does not match")
+        if checkpoint.get("site_to_index", {}) != site_to_index:
+            raise RuntimeError("Checkpoint site mapping does not match the manifest")
+        if checkpoint.get("site_class_weights", {}) != site_weight_map:
+            raise RuntimeError("Checkpoint site-class weights do not match the manifest")
         model.load_state_dict(checkpoint["model_state"])
         teacher.load_state_dict(checkpoint["teacher_state"])
+        if site_head is not None:
+            site_state = checkpoint.get("site_head_state")
+            if not isinstance(site_state, dict) or not site_state:
+                raise RuntimeError("Checkpoint is missing the site-head state")
+            site_head.load_state_dict(site_state)
         if "optimizer_state" in checkpoint:
             optimizer.load_state_dict(checkpoint["optimizer_state"])
         if "scaler_state" in checkpoint:
@@ -1175,7 +1323,18 @@ def main() -> None:
             stable_seed(args.seed, "epoch", epoch),
         )
         loader = make_loader(rows, records, args, stable_seed(args.seed, epoch), shuffle=True)
-        train_metrics = train_epoch(model, teacher, loader, optimizer, scaler, device, args)
+        train_metrics = train_epoch(
+            model,
+            teacher,
+            site_head,
+            site_class_weights,
+            loader,
+            optimizer,
+            scaler,
+            device,
+            args,
+            epoch,
+        )
         eval_metrics = evaluate_tasks(model, eval_loader, device, args.amp)
         entry = {
             "epoch": epoch + 1,
@@ -1196,6 +1355,10 @@ def main() -> None:
                 "variant": args.variant,
                 "epoch": epoch + 1,
                 "manifest_fingerprint": manifest_fingerprint,
+                "site_adversary_enabled": site_adversary_enabled,
+                "site_to_index": site_to_index,
+                "site_class_weights": site_weight_map,
+                "site_head_state": site_head.state_dict() if site_head is not None else None,
                 "model_state": model.state_dict(),
                 "teacher_state": teacher.state_dict(),
                 "optimizer_state": optimizer.state_dict(),
@@ -1232,6 +1395,15 @@ def main() -> None:
         "train_records": len(train_ids),
         "eval_records": len(eval_ids),
         "monitor_is_training_subset": bool(set(eval_ids).issubset(set(train_ids))),
+        "site_adversary": {
+            "enabled": site_adversary_enabled,
+            "site_count": len(site_names) if site_adversary_enabled else 0,
+            "warmup_epochs": args.domain_warmup_epochs,
+            "maximum_reversal_strength": args.domain_reversal_max,
+            "class_weights": site_weight_map,
+            "class_weight_basis": "inverse_training_record_count",
+            "training_only": True,
+        },
         "epochs": args.epochs,
         "elapsed_sec": time.time() - started,
         "task_metrics": final_metrics,

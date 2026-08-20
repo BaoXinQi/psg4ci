@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 
-MODEL_SUBDIR = "raw_sequence_v19_adaptive_epochs"
+MODEL_SUBDIR = "raw_sequence_v20_e1_domain_adversarial"
 E1_SEED = 20260804
 E1_EPOCHS = 15
 E1_WINDOWS_PER_RECORD = 128
@@ -14,6 +14,8 @@ E1_RECORDS_PER_BATCH = 1
 E1_LEARNING_RATE = 6e-4
 E1_WEIGHT_DECAY = 1e-4
 E1_EMA_DECAY = 0.996
+E1_DOMAIN_REVERSAL_MAX = 0.02
+E1_DOMAIN_WARMUP_EPOCHS = 2
 
 SEQUENCE_EPOCHS = {
     20260806: 2,

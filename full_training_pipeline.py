@@ -1,4 +1,4 @@
-"""End-to-end official-server reproduction of the V17/V14-Large method."""
+"""End-to-end official-server training for the V20 submission."""
 
 from __future__ import annotations
 
@@ -17,6 +17,8 @@ import torch
 
 from full_training_constants import (
     E1_BATCH_SIZE,
+    E1_DOMAIN_REVERSAL_MAX,
+    E1_DOMAIN_WARMUP_EPOCHS,
     E1_EMA_DECAY,
     E1_EPOCHS,
     E1_EVAL_WINDOWS_PER_RECORD,
@@ -39,7 +41,7 @@ from full_training_residuals import fit_and_write_residuals
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-PROTOCOL = "v19_official_full_training_adaptive_epochs_v1"
+PROTOCOL = "v20_official_full_training_e1_domain_adversarial_v1"
 
 
 def sha256(path: Path) -> str:
@@ -155,9 +157,9 @@ def build_metadata(
         "status": "complete",
         "protocol": PROTOCOL,
         "model": (
-            "officially retrained E1 + fresh-embedding-gated three-member weak "
-            "domain-adversarial Raw ensemble + 0.375 record-wise date, CAISR, "
-            "and follow-up residual"
+            "officially retrained weak site-adversarial E1 + fresh-embedding-gated "
+            "three-member weak domain-adversarial Raw ensemble + 0.375 record-wise "
+            "date, CAISR, and follow-up residual"
         ),
         "training_records": int(len(frame)),
         "training_positives": int(frame["label"].sum()),
@@ -170,9 +172,21 @@ def build_metadata(
         "pair_scope": "same_site",
         "pairwise_weight": 0.15,
         "domain_adversary": {
+            "level": "full_night_sequence",
             "training_only": True,
             "gradient_reversal_strength": 0.05,
             "inference_requires_site": False,
+        },
+        "encoder_domain_adversary": {
+            "level": "30_second_embedding",
+            "training_only": True,
+            "site_head": "192-64-site_count",
+            "warmup_epochs": E1_DOMAIN_WARMUP_EPOCHS,
+            "maximum_gradient_reversal_strength": E1_DOMAIN_REVERSAL_MAX,
+            "schedule": "zero_during_warmup_then_linear",
+            "class_balancing": "inverse_training_record_count_on_site_loss_only",
+            "inference_requires_site": False,
+            "fewer_than_two_sites_behavior": "disabled",
         },
         "creation_time_residual": {
             "file": "date_residual.json",
@@ -203,7 +217,7 @@ def build_metadata(
 def run_full_training(data_folder: Path, model_folder: Path, verbose: bool) -> Path:
     settings = production_settings()
     if settings["max_records"] == 0 and not torch.cuda.is_available():
-        raise RuntimeError("Production V18 full training requires a CUDA GPU")
+        raise RuntimeError("Production V20 full training requires a CUDA GPU")
 
     workspace = Path(os.environ.get("PSG4CI_V18_WORKSPACE", "/tmp/psg4ci_v18_full_training"))
     clear_workspace(workspace)
@@ -242,6 +256,9 @@ def run_full_training(data_folder: Path, model_folder: Path, verbose: bool) -> P
         "--learning-rate", str(E1_LEARNING_RATE),
         "--weight-decay", str(E1_WEIGHT_DECAY),
         "--ema-decay", str(E1_EMA_DECAY),
+        "--site-adversary",
+        "--domain-warmup-epochs", str(E1_DOMAIN_WARMUP_EPOCHS),
+        "--domain-reversal-max", str(E1_DOMAIN_REVERSAL_MAX),
         "--seed", str(E1_SEED),
         "--device", "cuda",
         "--overwrite",
@@ -386,6 +403,12 @@ def run_full_training(data_folder: Path, model_folder: Path, verbose: bool) -> P
             "windows_per_record_per_epoch": E1_WINDOWS_PER_RECORD,
             "precision": "FP32",
             "deployed_state": "EMA teacher",
+            "site_adversary": {
+                "training_only": True,
+                "warmup_epochs": E1_DOMAIN_WARMUP_EPOCHS,
+                "maximum_reversal_strength": E1_DOMAIN_REVERSAL_MAX,
+                "inference_requires_site": False,
+            },
         }
     )
     metadata = build_metadata(

@@ -1,4 +1,4 @@
-"""End-to-end official-server training for the V20 submission."""
+"""End-to-end official-server reproduction of the V17/V14-Large method."""
 
 from __future__ import annotations
 
@@ -17,8 +17,6 @@ import torch
 
 from full_training_constants import (
     E1_BATCH_SIZE,
-    E1_DOMAIN_REVERSAL_MAX,
-    E1_DOMAIN_WARMUP_EPOCHS,
     E1_EMA_DECAY,
     E1_EPOCHS,
     E1_EVAL_WINDOWS_PER_RECORD,
@@ -33,7 +31,6 @@ from full_training_constants import (
     SEQUENCE_BATCH_SIZE,
     SEQUENCE_EPOCHS,
     SEQUENCE_LEARNING_RATE,
-    SEQUENCE_SELECTION_MAX_EPOCHS,
     SEQUENCE_WEIGHT_DECAY,
 )
 from full_training_data import clear_workspace, prepare_training_data
@@ -41,7 +38,7 @@ from full_training_residuals import fit_and_write_residuals
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-PROTOCOL = "v20_official_full_training_e1_domain_adversarial_v1"
+PROTOCOL = "v18_official_full_training_reproduction_v1"
 
 
 def sha256(path: Path) -> str:
@@ -127,10 +124,8 @@ def build_metadata(
     e1: dict[str, Any],
     residuals: dict[str, Any],
     stage_times: dict[str, float],
-    sequence_epochs: dict[int, int],
-    epoch_selection: dict[str, Any],
 ) -> dict[str, Any]:
-    sequence_files = [f"raw_sequence_seed_{seed}.pt" for seed in sequence_epochs]
+    sequence_files = [f"raw_sequence_seed_{seed}.pt" for seed in SEQUENCE_EPOCHS]
     files: dict[str, Any] = {}
     for filename in [
         "e1_encoder.pt",
@@ -138,13 +133,12 @@ def build_metadata(
         "date_residual.json",
         "caisr_residual.json",
         "followup_residual.json",
-        "sequence_epoch_selection.json",
     ]:
         path = model_root / filename
         if not path.is_file():
             raise FileNotFoundError(f"Missing final artifact: {path}")
         files[filename] = {"bytes": path.stat().st_size, "sha256": sha256(path)}
-    for seed in sequence_epochs:
+    for seed in SEQUENCE_EPOCHS:
         filename = f"raw_sequence_seed_{seed}.pt"
         try:
             payload = torch.load(model_root / filename, map_location="cpu", weights_only=False)
@@ -157,36 +151,21 @@ def build_metadata(
         "status": "complete",
         "protocol": PROTOCOL,
         "model": (
-            "officially retrained weak site-adversarial E1 + fresh-embedding-gated "
-            "three-member weak domain-adversarial Raw ensemble + 0.375 record-wise "
-            "date, CAISR, and follow-up residual"
+            "officially retrained E1 + three-member weak domain-adversarial Raw "
+            "ensemble + 0.375 record-wise date, CAISR, and follow-up residual"
         ),
         "training_records": int(len(frame)),
         "training_positives": int(frame["label"].sum()),
         "training_sites": frame["SiteID"].value_counts().sort_index().astype(int).to_dict(),
         "encoder": e1,
         "sequence_files": sequence_files,
-        "sequence_epochs": {str(seed): int(epoch) for seed, epoch in sequence_epochs.items()},
-        "sequence_epoch_selection": epoch_selection,
         "ensemble": "equal-weight mean of logits",
         "pair_scope": "same_site",
         "pairwise_weight": 0.15,
         "domain_adversary": {
-            "level": "full_night_sequence",
             "training_only": True,
             "gradient_reversal_strength": 0.05,
             "inference_requires_site": False,
-        },
-        "encoder_domain_adversary": {
-            "level": "30_second_embedding",
-            "training_only": True,
-            "site_head": "192-64-site_count",
-            "warmup_epochs": E1_DOMAIN_WARMUP_EPOCHS,
-            "maximum_gradient_reversal_strength": E1_DOMAIN_REVERSAL_MAX,
-            "schedule": "zero_during_warmup_then_linear",
-            "class_balancing": "inverse_training_record_count_on_site_loss_only",
-            "inference_requires_site": False,
-            "fewer_than_two_sites_behavior": "disabled",
         },
         "creation_time_residual": {
             "file": "date_residual.json",
@@ -205,8 +184,6 @@ def build_metadata(
             "residual_blend_weight": RESIDUAL_BLEND_WEIGHT,
             "hidden_cohort_statistics": False,
         },
-        "binary_threshold": 0.5,
-        "binary_threshold_reason": "V18 reward-leading operating point retained",
         "preprocessing": preprocessing,
         "residual_fit": residuals,
         "stage_elapsed_sec": stage_times,
@@ -217,7 +194,7 @@ def build_metadata(
 def run_full_training(data_folder: Path, model_folder: Path, verbose: bool) -> Path:
     settings = production_settings()
     if settings["max_records"] == 0 and not torch.cuda.is_available():
-        raise RuntimeError("Production V20 full training requires a CUDA GPU")
+        raise RuntimeError("Production V18 full training requires a CUDA GPU")
 
     workspace = Path(os.environ.get("PSG4CI_V18_WORKSPACE", "/tmp/psg4ci_v18_full_training"))
     clear_workspace(workspace)
@@ -256,9 +233,6 @@ def run_full_training(data_folder: Path, model_folder: Path, verbose: bool) -> P
         "--learning-rate", str(E1_LEARNING_RATE),
         "--weight-decay", str(E1_WEIGHT_DECAY),
         "--ema-decay", str(E1_EMA_DECAY),
-        "--site-adversary",
-        "--domain-warmup-epochs", str(E1_DOMAIN_WARMUP_EPOCHS),
-        "--domain-reversal-max", str(E1_DOMAIN_REVERSAL_MAX),
         "--seed", str(E1_SEED),
         "--device", "cuda",
         "--overwrite",
@@ -287,76 +261,8 @@ def run_full_training(data_folder: Path, model_folder: Path, verbose: bool) -> P
     )
     embedding_manifest = embeddings_dir / "embedding_manifest.parquet"
 
-    sequence_epochs = dict(SEQUENCE_EPOCHS)
-    epoch_selection: dict[str, Any] = {
-        "status": "fallback",
-        "selected_epochs": {
-            str(seed): int(epoch) for seed, epoch in sequence_epochs.items()
-        },
-        "reason": "adaptive selection was not attempted",
-    }
-    selection_dir = workspace / "sequence_epoch_selection"
-    selection_summary_path = selection_dir / "selection_summary.json"
-    if settings["max_records"] == 0:
-        selection_command = [
-            sys.executable,
-            str(SCRIPT_DIR / "select_adaptive_sequence_epochs.py"),
-            "--manifest", str(manifest_path),
-            "--embedding-manifest", str(embedding_manifest),
-            "--output-dir", str(selection_dir),
-            "--batch-size", str(SEQUENCE_BATCH_SIZE),
-            "--num-workers", "4",
-            "--learning-rate", str(SEQUENCE_LEARNING_RATE),
-            "--weight-decay", str(SEQUENCE_WEIGHT_DECAY),
-            "--max-epochs", str(SEQUENCE_SELECTION_MAX_EPOCHS),
-            "--device", "cuda",
-        ]
-        selection_started = time.time()
-        try:
-            stage_times["sequence_epoch_selection"] = run_stage(
-                "sequence_epoch_selection", selection_command, workspace, verbose
-            )
-            epoch_selection = json.loads(
-                selection_summary_path.read_text(encoding="utf-8")
-            )
-            selected = {
-                int(seed): int(epoch)
-                for seed, epoch in epoch_selection["selected_epochs"].items()
-            }
-            if set(selected) != set(SEQUENCE_EPOCHS):
-                raise RuntimeError(
-                    f"Adaptive selection returned unexpected seeds: {sorted(selected)}"
-                )
-            if any(
-                epoch < 1 or epoch > SEQUENCE_SELECTION_MAX_EPOCHS
-                for epoch in selected.values()
-            ):
-                raise RuntimeError(f"Invalid selected sequence epochs: {selected}")
-            sequence_epochs = selected
-        except Exception as error:
-            stage_times["sequence_epoch_selection"] = time.time() - selection_started
-            sequence_epochs = dict(SEQUENCE_EPOCHS)
-            epoch_selection = {
-                "status": "fallback",
-                "selected_epochs": {
-                    str(seed): int(epoch) for seed, epoch in sequence_epochs.items()
-                },
-                "reason": f"{type(error).__name__}: {error}",
-            }
-            selection_dir.mkdir(parents=True, exist_ok=True)
-            selection_summary_path.write_text(
-                json.dumps(epoch_selection, indent=2, sort_keys=True) + "\n",
-                encoding="utf-8",
-            )
-    if not selection_summary_path.is_file():
-        selection_dir.mkdir(parents=True, exist_ok=True)
-        selection_summary_path.write_text(
-            json.dumps(epoch_selection, indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
-        )
-
     sequence_outputs: dict[int, Path] = {}
-    for seed, production_epochs in sequence_epochs.items():
+    for seed, production_epochs in SEQUENCE_EPOCHS.items():
         epochs = production_epochs
         if settings["sequence_epoch_cap"]:
             epochs = min(epochs, settings["sequence_epoch_cap"])
@@ -392,7 +298,6 @@ def run_full_training(data_folder: Path, model_folder: Path, verbose: bool) -> P
         if not source.is_file():
             raise FileNotFoundError(f"Sequence checkpoint was not created: {source}")
         shutil.copy2(source, staging / f"raw_sequence_seed_{seed}.pt")
-    shutil.copy2(selection_summary_path, staging / "sequence_epoch_selection.json")
 
     residual_started = time.time()
     residuals = fit_and_write_residuals(frame, staging)
@@ -403,23 +308,10 @@ def run_full_training(data_folder: Path, model_folder: Path, verbose: bool) -> P
             "windows_per_record_per_epoch": E1_WINDOWS_PER_RECORD,
             "precision": "FP32",
             "deployed_state": "EMA teacher",
-            "site_adversary": {
-                "training_only": True,
-                "warmup_epochs": E1_DOMAIN_WARMUP_EPOCHS,
-                "maximum_reversal_strength": E1_DOMAIN_REVERSAL_MAX,
-                "inference_requires_site": False,
-            },
         }
     )
     metadata = build_metadata(
-        staging,
-        frame,
-        preprocessing,
-        e1_metadata,
-        residuals,
-        stage_times,
-        sequence_epochs,
-        epoch_selection,
+        staging, frame, preprocessing, e1_metadata, residuals, stage_times
     )
     metadata["total_elapsed_sec"] = time.time() - total_started
     metadata["test_mode"] = bool(settings["max_records"])
@@ -434,7 +326,7 @@ def run_full_training(data_folder: Path, model_folder: Path, verbose: bool) -> P
     from raw_sequence_runtime import load_runtime
 
     runtime = load_runtime(staging, threads=2)
-    if len(runtime["sequences"]) != len(sequence_epochs):
+    if len(runtime["sequences"]) != len(SEQUENCE_EPOCHS):
         raise RuntimeError("Final runtime did not load all sequence members")
     del runtime
     if final_root.exists():

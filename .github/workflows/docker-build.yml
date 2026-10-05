@@ -3,7 +3,7 @@ name: Docker Build Test
 on:
   workflow_dispatch:
   push:
-    branches: [main, master, candidate/v20-e1-window-domain-adversarial]
+    branches: [main, master, candidate/v18-full-training]
   pull_request:
 
 jobs:
@@ -14,9 +14,9 @@ jobs:
       - name: Reject packaged Challenge-trained weights
         run: test ! -d pretrained_raw
       - name: Build image
-        run: docker build -t psg4ci-v20-full .
+        run: docker build -t psg4ci-v18-full .
       - name: Static and import checks
         run: |
-          docker run --rm psg4ci-v20-full python -m compileall -q /challenge
-          docker run --rm psg4ci-v20-full python -c "import torch, pyedflib, pyarrow, team_code, full_training_pipeline; print(torch.__version__)"
-          docker run --rm psg4ci-v20-full python smoke_full_training_components.py
+          docker run --rm psg4ci-v18-full python -m compileall -q /challenge
+          docker run --rm psg4ci-v18-full python -c "import torch, pyedflib, pyarrow, team_code, full_training_pipeline; print(torch.__version__)"
+          docker run --rm psg4ci-v18-full python smoke_full_training_components.py
